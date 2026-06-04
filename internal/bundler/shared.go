@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // ReadEntryFile reads and validates the entry file specified in the manifest.

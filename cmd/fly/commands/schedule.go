@@ -29,12 +29,12 @@ func NewScheduleCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "schedule",
 		Short: "Manage scheduled function executions",
-		Example: `  ffly schedule set "*/5 * * * *"          # Run every 5 minutes
-  ffly schedule set --preset "every-hour"  # Use a preset
-  ffly schedule list                       # List all schedules
-  ffly schedule get                        # Get schedule for current function
-  ffly schedule remove                     # Remove schedule
-  ffly schedule presets                    # List available presets`,
+		Example: `  ff schedule set "*/5 * * * *"          # Run every 5 minutes
+  ff schedule set --preset "every-hour"  # Use a preset
+  ff schedule list                       # List all schedules
+  ff schedule get                        # Get schedule for current function
+  ff schedule remove                     # Remove schedule
+  ff schedule presets                    # List available presets`,
 	}
 	cmd.AddCommand(
 		newScheduleSetCmd(),
@@ -148,7 +148,7 @@ func runScheduleSet(cronExpr, preset, timezone string, runOnDeploy bool) error {
 		if p, ok := presets[preset]; ok {
 			cronExpr = p.Cron
 		} else {
-			return fmt.Errorf("unknown preset: %s. Use 'ffly schedule presets' to see available presets", preset)
+			return fmt.Errorf("unknown preset: %s. Use 'ff schedule presets' to see available presets", preset)
 		}
 	}
 
@@ -221,7 +221,7 @@ func runScheduleList(asJSON bool) error {
 
 	if len(schedules) == 0 {
 		fmt.Println("No scheduled functions.")
-		fmt.Println("   → Use: ffly schedule set <cron-expression>")
+		fmt.Println("   → Use: ff schedule set <cron-expression>")
 		return nil
 	}
 
@@ -371,8 +371,8 @@ func runSchedulePresets(asJSON bool) error {
 	}
 
 	fmt.Println("Usage:")
-	fmt.Println("  ffly schedule set --preset every-hour")
-	fmt.Println("  ffly schedule set \"0 0 * * *\"")
+	fmt.Println("  ff schedule set --preset every-hour")
+	fmt.Println("  ff schedule set \"0 0 * * *\"")
 	return nil
 }
 

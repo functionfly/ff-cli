@@ -19,10 +19,10 @@ type Config struct {
 	SavedAt   time.Time `json:"saved_at"`
 }
 
-// LoadConfig loads configuration from the specified path, supporting FFLY_CONFIG override
+// LoadConfig loads configuration from the specified path, supporting FF_CONFIG override
 func LoadConfig(configPath string) (*Config, error) {
-	// Check for FFLY_CONFIG environment variable override
-	if envPath := os.Getenv("FFLY_CONFIG"); envPath != "" {
+	// Check for FF_CONFIG environment variable override
+	if envPath := os.Getenv("FF_CONFIG"); envPath != "" {
 		configPath = envPath
 	}
 
@@ -47,8 +47,8 @@ func LoadConfig(configPath string) (*Config, error) {
 
 // SaveConfig saves configuration to the specified path, creating directories as needed
 func SaveConfig(config *Config, configPath string) error {
-	// Check for FFLY_CONFIG environment variable override
-	if envPath := os.Getenv("FFLY_CONFIG"); envPath != "" {
+	// Check for FF_CONFIG environment variable override
+	if envPath := os.Getenv("FF_CONFIG"); envPath != "" {
 		configPath = envPath
 	}
 
@@ -75,7 +75,7 @@ func SaveConfig(config *Config, configPath string) error {
 	return nil
 }
 
-// EnsureConfigDir ensures the .ffly directory exists
+// EnsureConfigDir ensures the .ff directory exists
 func EnsureConfigDir() error {
-	return os.MkdirAll(".ffly", 0755)
+	return os.MkdirAll(".ff", 0755)
 }

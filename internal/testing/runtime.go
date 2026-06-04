@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/functionfly/fly/internal/flypy"
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/flypy"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // RuntimeResult represents the result of a runtime execution.

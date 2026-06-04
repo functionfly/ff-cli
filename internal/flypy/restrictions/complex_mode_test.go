@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/functionfly/fly/internal/flypy/parser"
+	"github.com/functionfly/ff-cli/internal/flypy/parser"
 )
 
 func TestComplexModeAllowedModules(t *testing.T) {

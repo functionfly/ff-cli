@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/functionfly/fly/internal/flypy"
+	"github.com/functionfly/ff-cli/internal/flypy"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +26,9 @@ deterministic execution. The compiler enforces restrictions to ensure the
 function will produce identical outputs for identical inputs.
 
 Examples:
-  ffly flypy build handler.py
-  ffly flypy build src/main.py --output=./build
-  ffly flypy build --config=custom.yaml`,
+  ff flypy build handler.py
+  ff flypy build src/main.py --output=./build
+  ff flypy build --config=custom.yaml`,
 	Args: cobra.ExactArgs(1),
 	Run:  flypyBuildRun,
 }
@@ -158,6 +158,6 @@ func flypyBuildRun(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("\n")
 	fmt.Printf("Next steps:\n")
-	fmt.Printf("  ffly flypy local     # Test locally\n")
-	fmt.Printf("  ffly flypy deploy    # Deploy to registry\n")
+	fmt.Printf("  ff flypy local     # Test locally\n")
+	fmt.Printf("  ff flypy deploy    # Deploy to registry\n")
 }

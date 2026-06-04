@@ -18,13 +18,13 @@ You can add, list, and remove backends for your apps.
 
 Examples:
   # List all backends for an app
-  ffly backend list --app myapp
+  ff backend list --app myapp
 
   # Add a new backend
-  ffly backend add --app myapp --provider vercel --region us-east-1
+  ff backend add --app myapp --provider vercel --region us-east-1
 
   # Remove a backend
-  ffly backend remove --app myapp --backend <backend-id>`,
+  ff backend remove --app myapp --backend <backend-id>`,
 	SilenceUsage: true,
 }
 

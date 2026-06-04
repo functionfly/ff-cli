@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 // exceptionVarNames are common Python exception variable names (except Foo as e).

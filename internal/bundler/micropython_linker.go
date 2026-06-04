@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // ProductionMicroPythonLinker provides production-ready linking of Python code with MicroPython runtime

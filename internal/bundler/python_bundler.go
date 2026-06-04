@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // PythonDependency represents a Python package dependency

@@ -91,7 +91,7 @@ func PromptConfirm(question string, defaultYes bool) bool {
 
 // resolveBaseURL returns the API base URL, checking env then config then default.
 func resolveBaseURL() string {
-	if baseURL := os.Getenv("FFLY_API_URL"); baseURL != "" {
+	if baseURL := os.Getenv("FF_API_URL"); baseURL != "" {
 		return baseURL
 	}
 	if cfg, _ := LoadConfig(); cfg != nil && cfg.API.URL != "" {

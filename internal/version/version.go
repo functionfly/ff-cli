@@ -9,7 +9,7 @@ import (
 
 // Version is the semantic version string, injected at build time.
 // Defaults to "dev" if not set during build.
-var Version = "1.2.0"
+var Version = "1.0.0"
 
 // Commit is the git commit hash, injected at build time.
 // Defaults to "" if not set during build.
@@ -34,7 +34,7 @@ func BuildDate() time.Time {
 
 // Info returns a formatted string with version information.
 func Info() string {
-	return fmt.Sprintf("fly version %s (commit: %s, date: %s)", Version, Commit, Date)
+	return fmt.Sprintf("ff version %s (commit: %s, date: %s)", Version, Commit, Date)
 }
 
 // Short returns just the version string.

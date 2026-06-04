@@ -22,7 +22,7 @@ func TestBuildError_StatusCodes(t *testing.T) {
 			name:       "401 unauthorized",
 			statusCode: 401,
 			body:       `{"error":"unauthorized"}`,
-			wantHint:   "ffly login",
+			wantHint:   "ff login",
 			wantMsg:    "unauthorized",
 		},
 		{
@@ -320,8 +320,8 @@ func TestAPIClient_DO_SetsUserAgent(t *testing.T) {
 	client := newTestClient(ts)
 	client.Get("/test", nil)
 
-	if !strings.HasPrefix(gotUA, "ffly-cli/") {
-		t.Errorf("User-Agent = %q, want prefix ffly-cli/", gotUA)
+	if !strings.HasPrefix(gotUA, "ff-cli/") {
+		t.Errorf("User-Agent = %q, want prefix ff-cli/", gotUA)
 	}
 }
 

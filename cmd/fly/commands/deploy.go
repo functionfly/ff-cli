@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewDeployCmd creates the `ffly deploy` command.
+// NewDeployCmd creates the `ff deploy` command.
 // It publishes the function and then optionally:
 //   - Tags the resulting version with an environment alias (--env staging|production)
 //   - Starts a canary deployment at the given traffic percentage (--canary N)
@@ -23,14 +23,14 @@ func NewDeployCmd() *cobra.Command {
 		Use:   "deploy",
 		Short: "Publish and promote a function to an environment",
 		Long: `Publish your function and promote it to a named environment (staging or
-production) or start a canary rollout. Under the hood 'ffly deploy' runs
-'ffly publish' and then sets the appropriate version alias.
+production) or start a canary rollout. Under the hood 'ff deploy' runs
+'ff publish' and then sets the appropriate version alias.
 
-  ffly deploy --env production          Publish and set as production
-  ffly deploy --env staging             Publish and set as staging
-  ffly deploy --canary 10               Publish and start canary at 10%
-  ffly deploy --env production --force  Skip confirmation`,
-		Example: "  ffly deploy --env production\n  ffly deploy --env staging\n  ffly deploy --canary 10\n  ffly deploy --env production --access public",
+  ff deploy --env production          Publish and set as production
+  ff deploy --env staging             Publish and set as staging
+  ff deploy --canary 10               Publish and start canary at 10%
+  ff deploy --env production --force  Skip confirmation`,
+		Example: "  ff deploy --env production\n  ff deploy --env staging\n  ff deploy --canary 10\n  ff deploy --env production --access public",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if env == "" && canaryPercent == 0 {
 				return fmt.Errorf("specify --env (staging|production) or --canary <percent>")
@@ -141,7 +141,7 @@ func runDeploy(env string, canaryPercent int, access string, force, dryRun, asJS
 		var canary CanaryConfig
 		canaryPath := fmt.Sprintf("/v1/registry/functions/%s/%s/canary", author, name)
 		if err := client.Post(canaryPath, req, &canary); err != nil {
-			return fmt.Errorf("published but could not start canary: %w\n   → Run: ffly canary start --version %s --percent %d", err, version, canaryPercent)
+			return fmt.Errorf("published but could not start canary: %w\n   → Run: ff canary start --version %s --percent %d", err, version, canaryPercent)
 		}
 		if asJSON || WantJSON() {
 			printJSON(canary)
@@ -149,10 +149,10 @@ func runDeploy(env string, canaryPercent int, access string, force, dryRun, asJS
 		}
 		fmt.Printf("✅ %s/%s v%s deployed as canary (%d%% traffic)\n\n", author, name, version, canaryPercent)
 		fmt.Printf("Next steps:\n")
-		fmt.Printf("  ffly canary status               — check metrics\n")
-		fmt.Printf("  ffly canary promote --percent 50  — increase traffic\n")
-		fmt.Printf("  ffly canary promote --full         — complete rollout\n")
-		fmt.Printf("  ffly canary rollback               — revert if issues\n")
+		fmt.Printf("  ff canary status               — check metrics\n")
+		fmt.Printf("  ff canary promote --percent 50  — increase traffic\n")
+		fmt.Printf("  ff canary promote --full         — complete rollout\n")
+		fmt.Printf("  ff canary rollback               — revert if issues\n")
 	}
 	return nil
 }

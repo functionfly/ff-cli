@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 // GenerateRust generates Rust code from IR (backward compatible)

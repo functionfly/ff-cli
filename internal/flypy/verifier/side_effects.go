@@ -3,7 +3,7 @@ package verifier
 import (
 	"fmt"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 // SideEffect represents a detected side effect in the code

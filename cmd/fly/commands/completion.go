@@ -11,12 +11,12 @@ func NewCompletionCmd(root *cobra.Command) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate shell completion scripts",
-		Long: `Generate shell completion scripts for ffly.
+		Long: `Generate shell completion scripts for ff.
 
-Bash:   source <(ffly completion bash)
-Zsh:    source <(ffly completion zsh)
-Fish:   ffly completion fish | source
-PS:     ffly completion powershell | Out-String | Invoke-Expression`,
+Bash:   source <(ff completion bash)
+Zsh:    source <(ff completion zsh)
+Fish:   ff completion fish | source
+PS:     ff completion powershell | Out-String | Invoke-Expression`,
 		ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
 		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		RunE: func(cmd *cobra.Command, args []string) error {

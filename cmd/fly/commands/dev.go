@@ -23,7 +23,7 @@ func NewDevCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
 		Short:   "Run your function locally",
-		Example: "  ffly dev\n  ffly dev --port 8080\n  ffly dev --watch",
+		Example: "  ff dev\n  ff dev --port 8080\n  ff dev --watch",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, _ := LoadConfig()
 			if port == 0 {

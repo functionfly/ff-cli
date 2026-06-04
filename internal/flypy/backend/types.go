@@ -3,7 +3,7 @@ package backend
 import (
 	"fmt"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 type Field struct {

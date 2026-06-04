@@ -14,7 +14,7 @@ func NewStatsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "stats [author/name]",
 		Short:   "View function usage statistics",
-		Example: "  ffly stats\n  ffly stats alice/my-fn\n  ffly stats --period 7d\n  ffly stats --json",
+		Example: "  ff stats\n  ff stats alice/my-fn\n  ff stats --period 7d\n  ff stats --json",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runStats(args, period, asJSON)

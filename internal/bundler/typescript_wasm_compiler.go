@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // WASM 1.0 section IDs

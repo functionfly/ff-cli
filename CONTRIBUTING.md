@@ -1,6 +1,6 @@
 # Contributing to FunctionFly CLI
 
-Thanks for your interest in contributing to `ffly`! This guide covers everything you need to get started.
+Thanks for your interest in contributing to `ff-cli`! This guide covers everything you need to get started.
 
 ## Prerequisites
 
@@ -15,16 +15,16 @@ Optional (for integration tests):
 ## Getting Started
 
 ```bash
-git clone https://github.com/functionfly/fly.git
-cd fly
+git clone https://github.com/functionfly/ff-cli.git
+cd ff-cli
 go mod download
-go build ./cmd/ffly
+go build ./cmd/ff
 ```
 
 Run the binary:
 
 ```bash
-./ffly --help
+./ff --help
 ```
 
 ## Running Tests
@@ -54,7 +54,7 @@ cmd/fly/
     root.go          Root command + command registration
     api.go           HTTP API client
     credentials.go   Keychain + file credential storage
-    config.go        Global CLI config (~/.functionfly/)
+    config.go        Global CLI config (~/.ff/)
     errors.go        Error types + exit codes
     ...
 internal/
@@ -79,7 +79,7 @@ internal/
 - Follow standard Go conventions (`gofmt`, `go vet`).
 - No comments in code unless asked (per project convention).
 - Use `fmt.Errorf("...: %w", err)` for error wrapping.
-- User-facing errors should include a hint (e.g. "Run 'ffly login' to authenticate").
+- User-facing errors should include a hint (e.g. "Run 'ff login' to authenticate").
 - Use `printJSON()` for `--json` output and `WantJSON()` for `--format json`.
 
 ## Commit Messages

@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 // CodegenContext holds all mutable state for a single code generation pass.

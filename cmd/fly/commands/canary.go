@@ -35,13 +35,13 @@ func NewCanaryCmd() *cobra.Command {
 		Short: "Manage canary deployments",
 		Long: `Gradually roll out a new version to a percentage of traffic.
 
-  ffly canary start --version 1.2.0 --percent 10   Start canary at 10%
-  ffly canary status                                Check current canary
-  ffly canary promote --percent 50                  Increase to 50%
-  ffly canary promote --full                        Promote to 100% (full rollout)
-  ffly canary rollback                              Roll back canary
-  ffly canary cancel                                Cancel and remove canary
-  ffly canary history                               Show past canary deployments`,
+  ff canary start --version 1.2.0 --percent 10   Start canary at 10%
+  ff canary status                                Check current canary
+  ff canary promote --percent 50                  Increase to 50%
+  ff canary promote --full                        Promote to 100% (full rollout)
+  ff canary rollback                              Roll back canary
+  ff canary cancel                                Cancel and remove canary
+  ff canary history                               Show past canary deployments`,
 	}
 	cmd.AddCommand(
 		newCanaryStartCmd(),
@@ -66,8 +66,8 @@ func newCanaryStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start [author/name]",
 		Short: "Start a canary deployment",
-		Example: "  ffly canary start --version 1.2.0 --percent 10\n" +
-			"  ffly canary start --version 1.2.0 --percent 5 --auto-promote --promote-threshold 99.5",
+		Example: "  ff canary start --version 1.2.0 --percent 10\n" +
+			"  ff canary start --version 1.2.0 --percent 5 --auto-promote --promote-threshold 99.5",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if version == "" {
@@ -121,7 +121,7 @@ func newCanaryStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "status [author/name]",
 		Short:   "Show the current canary deployment",
-		Example: "  ffly canary status\n  ffly canary status alice/my-fn",
+		Example: "  ff canary status\n  ff canary status alice/my-fn",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
@@ -159,8 +159,8 @@ func newCanaryPromoteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "promote [author/name]",
 		Short: "Increase canary traffic or fully promote",
-		Example: "  ffly canary promote --percent 50\n" +
-			"  ffly canary promote --full",
+		Example: "  ff canary promote --percent 50\n" +
+			"  ff canary promote --full",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
@@ -214,7 +214,7 @@ func newCanaryRollbackCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "rollback [author/name]",
 		Short:   "Roll back the canary to the stable version",
-		Example: "  ffly canary rollback\n  ffly canary rollback alice/my-fn",
+		Example: "  ff canary rollback\n  ff canary rollback alice/my-fn",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
@@ -249,7 +249,7 @@ func newCanaryCancelCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "cancel [author/name]",
 		Short:   "Cancel and remove the active canary deployment",
-		Example: "  ffly canary cancel\n  ffly canary cancel --force",
+		Example: "  ff canary cancel\n  ff canary cancel --force",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
@@ -286,7 +286,7 @@ func newCanaryHistoryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "history [author/name]",
 		Short:   "Show canary deployment history",
-		Example: "  ffly canary history\n  ffly canary history alice/my-fn",
+		Example: "  ff canary history\n  ff canary history alice/my-fn",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)

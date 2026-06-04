@@ -13,7 +13,7 @@ func NewRollbackCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "rollback [author/name]",
 		Short:   "Roll back to a previous version",
-		Example: "  ffly rollback\n  ffly rollback alice/my-fn\n  ffly rollback --version 1.0.5\n  ffly rollback --force",
+		Example: "  ff rollback\n  ff rollback alice/my-fn\n  ff rollback --version 1.0.5\n  ff rollback --force",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRollback(args, version, force, asJSON)
@@ -106,7 +106,7 @@ func runRollback(args []string, targetVersion string, force, asJSON bool) error 
 		return nil
 	}
 	fmt.Printf("✅ Rolled back %s/%s to v%s\n", author, name, target.Version)
-	fmt.Printf("\nRun 'ffly test' to verify the rollback.\n")
+	fmt.Printf("\nRun 'ff test' to verify the rollback.\n")
 	return nil
 }
 

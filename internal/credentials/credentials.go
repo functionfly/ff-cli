@@ -30,13 +30,13 @@ type User struct {
 // credentialsPath returns the path to the credentials file
 func credentialsPath() string {
 	homeDir, _ := os.UserHomeDir()
-	return filepath.Join(homeDir, ".functionfly", "credentials.json")
+	return filepath.Join(homeDir, ".ff", "credentials.json")
 }
 
-// ensureConfigDir creates the .functionfly directory if it doesn't exist
+// ensureConfigDir creates the .ff directory if it doesn't exist
 func ensureConfigDir() error {
 	homeDir, _ := os.UserHomeDir()
-	configDir := filepath.Join(homeDir, ".functionfly")
+	configDir := filepath.Join(homeDir, ".ff")
 	return os.MkdirAll(configDir, 0755)
 }
 
@@ -66,7 +66,7 @@ func Load() (*Credentials, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("not logged in. run 'ffly login' first")
+			return nil, fmt.Errorf("not logged in. run 'ff login' first")
 		}
 		return nil, fmt.Errorf("failed to read credentials file: %w", err)
 	}
@@ -78,7 +78,7 @@ func Load() (*Credentials, error) {
 
 	// Check if token is expired
 	if time.Now().After(creds.ExpiresAt) {
-		return nil, fmt.Errorf("authentication token expired. run 'ffly login' again")
+		return nil, fmt.Errorf("authentication token expired. run 'ff login' again")
 	}
 
 	return &creds, nil

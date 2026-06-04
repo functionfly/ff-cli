@@ -3,7 +3,7 @@ package backend
 import (
 	"testing"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 func TestGenerateValue_Literals(t *testing.T) {

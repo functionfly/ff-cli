@@ -1,7 +1,7 @@
 package bundler
 
 import (
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // BundleForWasmRuntime bundles code for WebAssembly runtime execution

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/functionfly/fly/internal/version"
+	"github.com/functionfly/ff-cli/internal/version"
 )
 
 // APIClient is a simple HTTP client for the FunctionFly API.
@@ -20,9 +20,9 @@ type APIClient struct {
 	client  *http.Client
 }
 
-// NewAPIClient creates a new API client using FFLY_TOKEN env or stored credentials.
+// NewAPIClient creates a new API client using FF_TOKEN env or stored credentials.
 func NewAPIClient() (*APIClient, error) {
-	token := os.Getenv("FFLY_TOKEN")
+	token := os.Getenv("FF_TOKEN")
 	if token == "" {
 		creds, err := LoadCredentials()
 		if err != nil {
@@ -31,7 +31,7 @@ func NewAPIClient() (*APIClient, error) {
 		token = creds.Token
 	}
 	baseURL := "https://api.functionfly.com"
-	if url := os.Getenv("FFLY_API_URL"); url != "" {
+	if url := os.Getenv("FF_API_URL"); url != "" {
 		baseURL = url
 	} else if cfg, _ := LoadConfig(); cfg != nil && cfg.API.URL != "" {
 		baseURL = cfg.API.URL
@@ -41,7 +41,7 @@ func NewAPIClient() (*APIClient, error) {
 
 // NewAPIClientWithToken creates a new API client with an explicit token.
 func NewAPIClientWithToken(token string) *APIClient {
-	if url := os.Getenv("FFLY_API_URL"); url != "" {
+	if url := os.Getenv("FF_API_URL"); url != "" {
 		return &APIClient{BaseURL: url, Token: token, client: &http.Client{Timeout: 30 * time.Second}}
 	}
 	cfg, _ := LoadConfig()
@@ -114,7 +114,7 @@ func (c *APIClient) do(req *http.Request, out interface{}) error {
 	if c.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Token)
 	}
-	req.Header.Set("User-Agent", "ffly-cli/"+version.Short())
+	req.Header.Set("User-Agent", "ff-cli/"+version.Short())
 
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {
@@ -174,13 +174,13 @@ func (c *APIClient) buildError(statusCode int, body []byte) error {
 	hint := ""
 	switch statusCode {
 	case 401:
-		hint = "\n   → Your session may have expired — run: ffly login"
+		hint = "\n   → Your session may have expired — run: ff login"
 	case 403:
 		hint = "\n   → You don't have permission to perform this action"
 	case 404:
 		hint = "\n   → The resource was not found"
 	case 409:
-		hint = "\n   → This version already exists — run: ffly update patch"
+		hint = "\n   → This version already exists — run: ff update patch"
 	case 429:
 		hint = "\n   → Rate limited — retrying with backoff"
 	case 502, 503, 504:
@@ -294,7 +294,7 @@ func (c *APIClient) StreamLines(path string, fn func(line string) bool) error {
 		req.Header.Set("Authorization", "Bearer "+c.Token)
 	}
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("User-Agent", "ffly-cli/"+version.Short())
+	req.Header.Set("User-Agent", "ff-cli/"+version.Short())
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("network error: %w", err)

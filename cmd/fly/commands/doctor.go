@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/functionfly/fly/internal/version"
+	"github.com/functionfly/ff-cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +33,7 @@ This command verifies:
   - Project manifest validity
   - Required tools (flypy, node, python)
   - Network connectivity`,
-		Example: "  ffly doctor\n  ffly doctor --json",
+		Example: "  ff doctor\n  ff doctor --json",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runDoctor(asJSON)
 		},
@@ -90,7 +90,7 @@ func checkCLIVersion() DiagnosticResult {
 	return DiagnosticResult{
 		Name:    "CLI Version",
 		Status:  "ok",
-		Message: fmt.Sprintf("ffly %s (%s/%s)", version.Short(), runtime.GOOS, runtime.GOARCH),
+		Message: fmt.Sprintf("ff %s (%s/%s)", version.Short(), runtime.GOOS, runtime.GOARCH),
 	}
 }
 
@@ -100,14 +100,14 @@ func checkAuth() DiagnosticResult {
 		return DiagnosticResult{
 			Name:    "Authentication",
 			Status:  "error",
-			Message: "Not logged in — run: ffly login",
+			Message: "Not logged in — run: ff login",
 		}
 	}
 	if !creds.ExpiresAt.IsZero() && time.Now().After(creds.ExpiresAt) {
 		return DiagnosticResult{
 			Name:    "Authentication",
 			Status:  "error",
-			Message: fmt.Sprintf("Session expired — run: ffly login"),
+			Message: fmt.Sprintf("Session expired — run: ff login"),
 		}
 	}
 	expiresIn := "never"

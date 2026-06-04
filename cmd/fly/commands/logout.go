@@ -11,7 +11,7 @@ func NewLogoutCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "logout",
 		Short:   "Clear stored credentials and log out",
-		Example: "  ffly logout\n  ffly logout --force",
+		Example: "  ff logout\n  ff logout --force",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runLogout(force)
 		},
@@ -23,7 +23,7 @@ func NewLogoutCmd() *cobra.Command {
 func runLogout(force bool) error {
 	creds, err := LoadCredentials()
 	if err != nil {
-		return fmt.Errorf("not logged in — nothing to log out from\n   → Run: ffly login")
+		return fmt.Errorf("not logged in — nothing to log out from\n   → Run: ff login")
 	}
 	// Skip prompt in non-interactive (CI) or when --force is set.
 	if !force && !YesMode && IsInteractive() {
@@ -37,6 +37,6 @@ func runLogout(force bool) error {
 		return fmt.Errorf("could not remove credentials: %w", err)
 	}
 	fmt.Printf("✅ Logged out %s\n", creds.User.Username)
-	fmt.Println("   Run 'ffly login' to authenticate again.")
+	fmt.Println("   Run 'ff login' to authenticate again.")
 	return nil
 }

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 // BuildInput contains the input for building an artifact

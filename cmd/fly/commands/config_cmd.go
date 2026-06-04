@@ -11,25 +11,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const configHelpLong = `Manage global ffly CLI configuration.
+const configHelpLong = `Manage global ff CLI configuration.
 
 Configuration precedence (highest first):
-  1. Environment variables (FFLY_*)
-  2. Global config file (~/.functionfly/config.yaml)
+  1. Environment variables (FF_*)
+  2. Global config file (~/.ff/config.yaml)
   3. Defaults
 
 Environment variables (override config file):
-  FFLY_API_URL       API base URL (e.g. https://api.functionfly.com or http://localhost:8080)
-  FFLY_API_TIMEOUT  Request timeout (e.g. 30s)
-  FFLY_DEV_EMAIL    Email for dev login (ffly login --dev)
-  FFLY_DEV_PASSWORD Password for dev login
-  FFLY_DEV_LOGIN=1  Force dev email/password login
-  FFLY_TOKEN        Bearer token (overrides stored credentials)
-  FFLY_TELEMETRY    Set to 0, false, or no to disable telemetry
-  FFLY_CONFIG       Path to config file (overrides ~/.functionfly/config.yaml)
+  FF_API_URL       API base URL (e.g. https://api.functionfly.com or http://localhost:8080)
+  FF_API_TIMEOUT  Request timeout (e.g. 30s)
+  FF_DEV_EMAIL    Email for dev login (ff login --dev)
+  FF_DEV_PASSWORD Password for dev login
+  FF_DEV_LOGIN=1  Force dev email/password login
+  FF_TOKEN        Bearer token (overrides stored credentials)
+  FF_TELEMETRY    Set to 0, false, or no to disable telemetry
+  FF_CONFIG       Path to config file (overrides ~/.ff/config.yaml)
 
-Use "ffly config" or "ffly config view" to show current config and path.
-Use "ffly config reset" to restore defaults (removes or overwrites config file).`
+Use "ff config" or "ff config view" to show current config and path.
+Use "ff config reset" to restore defaults (removes or overwrites config file).`
 
 // NewConfigCmd returns the config command and its subcommands (view, set, reset).
 func NewConfigCmd() *cobra.Command {
@@ -37,11 +37,11 @@ func NewConfigCmd() *cobra.Command {
 		Use:   "config",
 		Short: "View or reset global CLI configuration",
 		Long:  configHelpLong,
-		Example: `  ffly config
-  ffly config view
-  ffly config set api.url=https://api.example.com
-  ffly config reset`,
-		RunE: runConfigView, // "ffly config" with no subcommand runs view
+		Example: `  ff config
+  ff config view
+  ff config set api.url=https://api.example.com
+  ff config reset`,
+		RunE: runConfigView, // "ff config" with no subcommand runs view
 	}
 	cmd.AddCommand(newConfigViewCmd(), newConfigShowCmd(), newConfigSetCmd(), newConfigResetCmd())
 	return cmd
@@ -103,14 +103,14 @@ func newConfigSetCmd() *cobra.Command {
 		Long: `Set config values in the global config file.
 Keys use dot notation to set nested values:
 
-  ffly config set api.url=https://api.example.com
-  ffly config set api.timeout=60s
-  ffly config set telemetry.enabled=false
-  ffly config set dev.port=8787 dev.watch=true
+  ff config set api.url=https://api.example.com
+  ff config set api.timeout=60s
+  ff config set telemetry.enabled=false
+  ff config set dev.port=8787 dev.watch=true
 
-Use "ffly config view" to see all available keys and current values.`,
-		Example: `  ffly config set api.url=https://api.example.com
-  ffly config set api.timeout=30s telemetry.enabled=false`,
+Use "ff config view" to see all available keys and current values.`,
+		Example: `  ff config set api.url=https://api.example.com
+  ff config set api.timeout=30s telemetry.enabled=false`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: runConfigSet,
 	}
@@ -183,7 +183,7 @@ func runConfigReset(cmd *cobra.Command, args []string) error {
 		return NewCLIError(err, ExitCodeConfigError, fmt.Sprintf("could not determine config path: %v", err))
 	}
 	if err := SaveConfig(DefaultConfig()); err != nil {
-		return NewCLIError(err, ExitCodeConfigError, fmt.Sprintf("could not reset config: %v\n   → Check permissions or FFLY_CONFIG", err))
+		return NewCLIError(err, ExitCodeConfigError, fmt.Sprintf("could not reset config: %v\n   → Check permissions or FF_CONFIG", err))
 	}
 	fmt.Printf("Config reset to defaults.\nConfig file: %s\n", path)
 	return nil

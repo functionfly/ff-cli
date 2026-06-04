@@ -4,12 +4,12 @@
 $ErrorActionPreference = "Stop"
 
 $Repo = "functionfly/fly"
-$Binary = "ffly"
-$InstallDir = if ($env:FLY_INSTALL_DIR) { $env:FLY_INSTALL_DIR } else { "$env:LOCALAPPDATA\ffly\bin" }
+$Binary = "ff"
+$InstallDir = if ($env:FLY_INSTALL_DIR) { $env:FLY_INSTALL_DIR } else { "$env:LOCALAPPDATA\ff\bin" }
 
-function Write-Info { param([string]$Msg) Write-Host "[ffly] $Msg" -ForegroundColor Blue }
-function Write-Ok   { param([string]$Msg) Write-Host "[ffly] $Msg" -ForegroundColor Green }
-function Write-Die  { param([string]$Msg) Write-Host "[ffly] error: $Msg" -ForegroundColor Red; exit 1 }
+function Write-Info { param([string]$Msg) Write-Host "[ff] $Msg" -ForegroundColor Blue }
+function Write-Ok   { param([string]$Msg) Write-Host "[ff] $Msg" -ForegroundColor Green }
+function Write-Die  { param([string]$Msg) Write-Host "[ff] error: $Msg" -ForegroundColor Red; exit 1 }
 
 function Get-LatestVersion {
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers @{ "Accept" = "application/vnd.github+json" }
@@ -26,7 +26,7 @@ function Main {
     $version = if ($env:FLY_VERSION) { $env:FLY_VERSION } else { Get-LatestVersion }
     $versionNum = $version -replace "^v", ""
 
-    Write-Info "Installing ffly $version for windows/$arch..."
+    Write-Info "Installing ff $version for windows/$arch..."
 
     $archive = "${Binary}_${versionNum}_windows_${arch}.zip"
     $url = "https://github.com/$Repo/releases/download/$version/$archive"
@@ -72,8 +72,8 @@ function Main {
             $env:Path = "$env:Path;$InstallDir"
         }
 
-        Write-Ok "ffly $version installed to $destPath"
-        Write-Ok "Run 'ffly --help' to get started."
+        Write-Ok "ff $version installed to $destPath"
+        Write-Ok "Run 'ff --help' to get started."
     }
     finally {
         Remove-Item -Path $tmpDir -Recurse -Force -ErrorAction SilentlyContinue

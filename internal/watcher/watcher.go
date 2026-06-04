@@ -158,7 +158,7 @@ func ShouldIgnoreFile(filename string) bool {
 		"functionfly-local",
 		"functionfly",
 		"fly",
-		"ffly",
+		"ff",
 		"migrate",
 		"health-monitor",
 		"orchestrator-api",

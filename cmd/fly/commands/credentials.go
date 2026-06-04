@@ -45,7 +45,7 @@ func credentialsPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not determine home directory: %w", err)
 	}
-	return filepath.Join(home, ".functionfly", "credentials.json"), nil
+	return filepath.Join(home, ".ff", "credentials.json"), nil
 }
 
 // LoadCredentials reads credentials from the OS keychain, falling back to the file on disk.
@@ -56,7 +56,7 @@ func LoadCredentials() (*Credentials, error) {
 		var creds Credentials
 		if err := json.Unmarshal([]byte(data), &creds); err == nil {
 			if !creds.ExpiresAt.IsZero() && time.Now().After(creds.ExpiresAt) {
-				return nil, fmt.Errorf("your session has expired\n   → Run: ffly login")
+				return nil, fmt.Errorf("your session has expired\n   → Run: ff login")
 			}
 			return &creds, nil
 		}
@@ -75,16 +75,16 @@ func loadCredentialsFromFile() (*Credentials, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("not logged in\n   → Run: ffly login")
+			return nil, fmt.Errorf("not logged in\n   → Run: ff login")
 		}
 		return nil, fmt.Errorf("could not read credentials: %w", err)
 	}
 	var creds Credentials
 	if err := json.Unmarshal(data, &creds); err != nil {
-		return nil, fmt.Errorf("credentials file is corrupted\n   → Run: ffly login")
+		return nil, fmt.Errorf("credentials file is corrupted\n   → Run: ff login")
 	}
 	if !creds.ExpiresAt.IsZero() && time.Now().After(creds.ExpiresAt) {
-		return nil, fmt.Errorf("your session has expired\n   → Run: ffly login")
+		return nil, fmt.Errorf("your session has expired\n   → Run: ff login")
 	}
 	return &creds, nil
 }
@@ -102,7 +102,7 @@ func SaveCredentials(creds *Credentials) error {
 		if err := saveCredentialsToFile(creds); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "⚠️  OS keychain unavailable — credentials saved to ~/.functionfly/credentials.json (chmod 600)\n")
+		fmt.Fprintf(os.Stderr, "⚠️  OS keychain unavailable — credentials saved to ~/.ff/credentials.json (chmod 600)\n")
 		return nil
 	}
 
@@ -163,7 +163,7 @@ func RefreshCredentials(ctx context.Context) (*Credentials, error) {
 		return nil, err
 	}
 	if creds.RefreshToken == "" {
-		return nil, fmt.Errorf("no refresh token available\n   → Run: ffly login")
+		return nil, fmt.Errorf("no refresh token available\n   → Run: ff login")
 	}
 
 	baseURL := resolveBaseURL()
@@ -242,11 +242,11 @@ func resolveAuthorName(args []string) (author, name string, err error) {
 	}
 	manifest, merr := LoadManifest("")
 	if merr != nil {
-		return "", "", fmt.Errorf("no functionfly.jsonc found — run 'ffly init' or pass author/name as argument")
+		return "", "", fmt.Errorf("no functionfly.jsonc found — run 'ff init' or pass author/name as argument")
 	}
 	creds, cerr := LoadCredentials()
 	if cerr != nil {
-		return "", "", fmt.Errorf("not logged in — run 'ffly login'")
+		return "", "", fmt.Errorf("not logged in — run 'ff login'")
 	}
 	return creds.User.Username, manifest.Name, nil
 }

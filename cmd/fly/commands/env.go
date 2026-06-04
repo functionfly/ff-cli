@@ -14,7 +14,7 @@ func NewEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "env",
 		Short:   "Manage environment variables",
-		Example: "  ffly env list\n  ffly env set KEY=value\n  ffly env get KEY\n  ffly env unset KEY\n  ffly env apply          # read .env and set variables\n  ffly env apply --dry-run",
+		Example: "  ff env list\n  ff env set KEY=value\n  ff env get KEY\n  ff env unset KEY\n  ff env apply          # read .env and set variables\n  ff env apply --dry-run",
 	}
 	cmd.AddCommand(newEnvListCmd(), newEnvSetCmd(), newEnvGetCmd(), newEnvUnsetCmd(), newEnvApplyCmd())
 	return cmd
@@ -69,10 +69,10 @@ func newEnvApplyCmd() *cobra.Command {
 		Long: `Read key=value pairs from a .env file (or a custom path) and set them.
 Each line in the file must be KEY=value. Lines starting with # are treated as comments.
 Use --dry-run to preview the changes without applying them.`,
-		Example: `  ffly env apply             # reads .env in current directory
-  ffly env apply .env.staging
-  ffly env apply --dry-run
-  ffly env apply --path /path/to/.env`,
+		Example: `  ff env apply             # reads .env in current directory
+  ff env apply .env.staging
+  ff env apply --dry-run
+  ff env apply --path /path/to/.env`,
 		RunE: func(cmd *cobra.Command, args []string) error { return runEnvApply(path, dryRun) },
 	}
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without applying them")
@@ -104,14 +104,14 @@ func runEnvList(asJSON bool) error {
 	}
 	if len(envVars) == 0 {
 		fmt.Println("No environment variables set.")
-		fmt.Println("   → Use: ffly env set KEY=value")
+		fmt.Println("   → Use: ff env set KEY=value")
 		return nil
 	}
 	fmt.Printf("Environment variables for %s/%s:\n\n", creds.User.Username, manifest.Name)
 	for k := range envVars {
 		fmt.Printf("  %s\n", k)
 	}
-	fmt.Printf("\n%d variable(s) — values hidden; use 'ffly env get KEY' to view a specific value\n", len(envVars))
+	fmt.Printf("\n%d variable(s) — values hidden; use 'ff env get KEY' to view a specific value\n", len(envVars))
 	return nil
 }
 
@@ -178,7 +178,7 @@ func runEnvGet(key string) error {
 	}
 	value, ok := envVars[key]
 	if !ok {
-		return fmt.Errorf("environment variable %q not found\n   → Use 'ffly env list' to see all variables", key)
+		return fmt.Errorf("environment variable %q not found\n   → Use 'ff env list' to see all variables", key)
 	}
 	fmt.Println(value)
 	return nil

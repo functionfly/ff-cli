@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/functionfly/fly/internal/flypy/artifact"
-	"github.com/functionfly/fly/internal/flypy/backend"
-	"github.com/functionfly/fly/internal/flypy/compiler"
-	"github.com/functionfly/fly/internal/flypy/ir"
-	"github.com/functionfly/fly/internal/flypy/parser"
-	"github.com/functionfly/fly/internal/flypy/restrictions"
-	"github.com/functionfly/fly/internal/flypy/verifier"
+	"github.com/functionfly/ff-cli/internal/flypy/artifact"
+	"github.com/functionfly/ff-cli/internal/flypy/backend"
+	"github.com/functionfly/ff-cli/internal/flypy/compiler"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/parser"
+	"github.com/functionfly/ff-cli/internal/flypy/restrictions"
+	"github.com/functionfly/ff-cli/internal/flypy/verifier"
 	"github.com/sirupsen/logrus"
 )
 

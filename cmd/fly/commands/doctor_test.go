@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/functionfly/fly/internal/version"
+	"github.com/functionfly/ff-cli/internal/version"
 )
 
 func TestCheckCLIVersion(t *testing.T) {
@@ -18,7 +18,7 @@ func TestCheckCLIVersion(t *testing.T) {
 	if result.Name != "CLI Version" {
 		t.Errorf("Name = %q, want CLI Version", result.Name)
 	}
-	want := fmt.Sprintf("ffly %s (%s/%s)", version.Short(), runtime.GOOS, runtime.GOARCH)
+	want := fmt.Sprintf("ff %s (%s/%s)", version.Short(), runtime.GOOS, runtime.GOARCH)
 	if result.Message != want {
 		t.Errorf("Message = %q, want %q", result.Message, want)
 	}

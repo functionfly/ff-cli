@@ -2,7 +2,7 @@
 package main
 
 import (
-	"github.com/functionfly/fly/cmd/fly/commands"
+	"github.com/functionfly/ff-cli/cmd/fly/commands"
 )
 
 func main() {

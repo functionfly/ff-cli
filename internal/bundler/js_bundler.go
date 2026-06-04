@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // BundleOptions contains options for the bundler

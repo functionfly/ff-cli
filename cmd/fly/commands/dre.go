@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewDreCmd returns the "ffly dre" command and subcommands.
+// NewDreCmd returns the "ff dre" command and subcommands.
 func NewDreCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dre",
@@ -21,7 +21,7 @@ func NewDreCmd() *cobra.Command {
 	return cmd
 }
 
-// NewDreRegenerateBootstrapCmd returns "ffly dre regenerate-bootstrap".
+// NewDreRegenerateBootstrapCmd returns "ff dre regenerate-bootstrap".
 func NewDreRegenerateBootstrapCmd() *cobra.Command {
 	var author string
 	cmd := &cobra.Command{
@@ -44,7 +44,7 @@ func NewDreRegenerateBootstrapCmd() *cobra.Command {
 			if c.Token != "" {
 				req.Header.Set("Authorization", "Bearer "+c.Token)
 			}
-			req.Header.Set("User-Agent", "ffly-cli/1.0.0")
+			req.Header.Set("User-Agent", "ff-cli/1.0.0")
 			// Regeneration can take a while; use a longer timeout (2 min)
 			client := &http.Client{Timeout: 120 * time.Second}
 			resp, err := client.Do(req)

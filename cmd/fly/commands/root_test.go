@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/functionfly/fly/internal/version"
+	"github.com/functionfly/ff-cli/internal/version"
 )
 
 // Smoke test: version subcommand runs without error.
@@ -35,8 +35,8 @@ func TestRootCmd_Help(t *testing.T) {
 		t.Fatalf("Execute() = %v", err)
 	}
 	got := out.String()
-	if !bytes.Contains([]byte(got), []byte("ffly")) {
-		t.Errorf("--help output should mention ffly: %s", got)
+	if !bytes.Contains([]byte(got), []byte("ff")) {
+		t.Errorf("--help output should mention ff: %s", got)
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // TestConfig represents test configuration

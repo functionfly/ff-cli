@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // JavyCompilationConfig contains configuration for Javy compilation

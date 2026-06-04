@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/functionfly/fly/internal/cli"
-	artifactPkg "github.com/functionfly/fly/internal/flypy/artifact"
+	"github.com/functionfly/ff-cli/internal/cli"
+	artifactPkg "github.com/functionfly/ff-cli/internal/flypy/artifact"
 	"github.com/spf13/cobra"
 )
 
@@ -33,9 +33,9 @@ The artifact will be uploaded, verified for determinism, and made available
 for execution through the FunctionFly API.
 
 Examples:
-  ffly flypy deploy
-  ffly flypy deploy --artifact=./dist --registry=https://api.functionfly.com
-  ffly flypy deploy --dry-run`,
+  ff flypy deploy
+  ff flypy deploy --artifact=./dist --registry=https://api.functionfly.com
+  ff flypy deploy --dry-run`,
 	Run: flypyDeployRun,
 }
 
@@ -68,7 +68,7 @@ func flypyDeployRun(cmd *cobra.Command, args []string) {
 	// Validate artifact directory exists
 	if _, err := os.Stat(artifactPath); os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "Error: artifact directory '%s' not found\n", artifactPath)
-		fmt.Fprintf(os.Stderr, "Run 'ffly flypy build' first to compile your function\n")
+		fmt.Fprintf(os.Stderr, "Run 'ff flypy build' first to compile your function\n")
 		os.Exit(1)
 	}
 
@@ -114,11 +114,11 @@ func flypyDeployRun(cmd *cobra.Command, args []string) {
 	// Determine registry URL
 	registryURL := flypyDeployFlags.registry
 	if registryURL == "" {
-		// Use API URL from global config or FFLY_API_URL
+		// Use API URL from global config or FF_API_URL
 		apiURL := resolveAPIURL()
 		if apiURL == "" {
 			fmt.Fprintf(os.Stderr, "Error: no registry URL provided and no API URL configured\n")
-			fmt.Fprintf(os.Stderr, "Either set --registry, FFLY_API_URL, or run 'ffly login' first\n")
+			fmt.Fprintf(os.Stderr, "Either set --registry, FF_API_URL, or run 'ff login' first\n")
 			os.Exit(1)
 		}
 		registryURL = apiURL
@@ -397,7 +397,7 @@ func getPublicKey() string {
 	}
 
 	// Check environment variable
-	if key := os.Getenv("FFLY_PUBLIC_KEY"); key != "" {
+	if key := os.Getenv("FF_PUBLIC_KEY"); key != "" {
 		return key
 	}
 
@@ -433,7 +433,7 @@ func computeArtifactContentHash(artifact *artifactPkg.Artifact) (string, error) 
 
 // resolveAPIURL returns the API URL from env/config, or empty string.
 func resolveAPIURL() string {
-	if url := os.Getenv("FFLY_API_URL"); url != "" {
+	if url := os.Getenv("FF_API_URL"); url != "" {
 		return url
 	}
 	if cfg, _ := LoadConfig(); cfg != nil {

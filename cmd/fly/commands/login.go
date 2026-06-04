@@ -80,7 +80,7 @@ func (as *authServer) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// Store code for exchange and notify waiting goroutine.
 	w.Header().Set("Content-Type", "text/html")
-	namespace := os.Getenv("FFLY_CLI_NAMESPACE")
+	namespace := os.Getenv("FF_CLI_NAMESPACE")
 	if namespace == "" {
 		namespace = "fx://<your-username>/*"
 	}
@@ -103,7 +103,7 @@ small{color:#64748b;display:block;margin-top:20px}
 <h2>✅ Authentication successful!</h2>
 <p>Your CLI session is ready.</p>
 <div class="code">`+namespace+`</div>
-<small>Run <code style="color:#7dd3fc">ffly whoami</code> to verify your session.</small>
+<small>Run <code style="color:#7dd3fc">ff whoami</code> to verify your session.</small>
 </div>
 </body>
 </html>`)
@@ -216,19 +216,19 @@ func NewLoginCmd() *cobra.Command {
 		Use:   "login",
 		Short: "Authenticate with FunctionFly",
 		Long:  "Authenticate with FunctionFly using OAuth or dev email/password.\n\nIn dev mode (--dev flag required), use email/password against the API.",
-		Example: `  ffly login
-  ffly login --provider github
-  ffly login --invite-code CODE
-  ffly login --dev --email admin@functionfly.local`,
+		Example: `  ff login
+  ff login --provider github
+  ff login --invite-code CODE
+  ff login --dev --email admin@functionfly.local`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runLogin(provider, noBrowser, dev, email, inviteCode, nonInteractive)
 		},
 	}
 	cmd.Flags().StringVar(&provider, "provider", "github", "OAuth provider (github, google)")
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Print the auth URL instead of opening a browser")
-	cmd.Flags().BoolVar(&dev, "dev", false, "Use email/password login (dev mode). Requires FFLY_API_URL for local API.")
-	cmd.Flags().StringVar(&email, "email", "", "Email for dev login (or set FFLY_DEV_EMAIL)")
-	cmd.Flags().StringVar(&inviteCode, "invite-code", "", "Invite code for OAuth signup (or set FFLY_INVITE_CODE)")
+	cmd.Flags().BoolVar(&dev, "dev", false, "Use email/password login (dev mode). Requires FF_API_URL for local API.")
+	cmd.Flags().StringVar(&email, "email", "", "Email for dev login (or set FF_DEV_EMAIL)")
+	cmd.Flags().StringVar(&inviteCode, "invite-code", "", "Invite code for OAuth signup (or set FF_INVITE_CODE)")
 	cmd.Flags().BoolVar(&nonInteractive, "no-interactive", false, "Fail without prompting in non-interactive environments")
 	return cmd
 }
@@ -246,13 +246,13 @@ func runLogin(provider string, noBrowser bool, dev bool, emailFlag string, invit
 	// Check for invite code in flag or environment variable.
 	inviteCode := inviteCodeFlag
 	if inviteCode == "" {
-		inviteCode = os.Getenv("FFLY_INVITE_CODE")
+		inviteCode = os.Getenv("FF_INVITE_CODE")
 	}
 
 	baseURL := resolveBaseURL()
 
-	// Dev mode: only activated by explicit --dev flag or FFLY_DEV_LOGIN=1.
-	useDev := dev || os.Getenv("FFLY_DEV_LOGIN") == "1"
+	// Dev mode: only activated by explicit --dev flag or FF_DEV_LOGIN=1.
+	useDev := dev || os.Getenv("FF_DEV_LOGIN") == "1"
 	if useDev {
 		return runDevLogin(baseURL, emailFlag, nonInteractive)
 	}
@@ -415,7 +415,7 @@ func getOAuthURLFromAPI(baseURL, provider, redirectURI, codeChallenge, inviteCod
 				return "", fmt.Errorf("API returned %d", resp.StatusCode)
 			}
 			if resp.StatusCode == 400 && contains(msg, "invite code") {
-				return "", fmt.Errorf("API returned %d: %s\n   → FunctionFly is invite-only. Use --invite-code or set FFLY_INVITE_CODE", resp.StatusCode, msg)
+				return "", fmt.Errorf("API returned %d: %s\n   → FunctionFly is invite-only. Use --invite-code or set FF_INVITE_CODE", resp.StatusCode, msg)
 			}
 			return "", fmt.Errorf("API returned %d: %s", resp.StatusCode, msg)
 		}
@@ -439,12 +439,12 @@ func getOAuthURLFromAPI(baseURL, provider, redirectURI, codeChallenge, inviteCod
 }
 
 // checkAuthEnvVars validates that required env vars are set in non-interactive mode.
-// Returns an error if FFLY_TOKEN is not set, guiding the user to use token-based auth.
+// Returns an error if FF_TOKEN is not set, guiding the user to use token-based auth.
 func checkAuthEnvVars() error {
-	if os.Getenv("FFLY_TOKEN") != "" {
+	if os.Getenv("FF_TOKEN") != "" {
 		return nil
 	}
-	return fmt.Errorf("not logged in and no FFLY_TOKEN set\n   → Set FFLY_TOKEN or run ffly login interactively")
+	return fmt.Errorf("not logged in and no FF_TOKEN set\n   → Set FF_TOKEN or run ff login interactively")
 }
 
 // runDevLogin uses POST /v1/auth/login (or /auth/login for localhost)
@@ -453,9 +453,9 @@ func checkAuthEnvVars() error {
 func runDevLogin(baseURL, emailFlag string, nonInteractive bool) error {
 	email := emailFlag
 	if email == "" {
-		email = os.Getenv("FFLY_DEV_EMAIL")
+		email = os.Getenv("FF_DEV_EMAIL")
 	}
-	password := os.Getenv("FFLY_DEV_PASSWORD")
+	password := os.Getenv("FF_DEV_PASSWORD")
 	if !nonInteractive && IsInteractive() && email == "" {
 		email = Prompt("Email", "admin@functionfly.local")
 	}
@@ -463,7 +463,7 @@ func runDevLogin(baseURL, emailFlag string, nonInteractive bool) error {
 		password = PromptSecret("Password")
 	}
 	if email == "" || password == "" {
-		return fmt.Errorf("email and password required for dev login (use --email and FFLY_DEV_PASSWORD)")
+		return fmt.Errorf("email and password required for dev login (use --email and FF_DEV_PASSWORD)")
 	}
 
 	loginPath := "/v1/auth/login"

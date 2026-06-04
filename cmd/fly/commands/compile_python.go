@@ -30,13 +30,13 @@ This command uses the FlyPy compiler to transform Python functions
 into deterministic WebAssembly modules that execute in the
 FunctionFly runtime without requiring a Python interpreter.`,
 		Example: `  # Compile a Python function
-  ffly compile python --input handler.py --output ./dist
+  ff compile python --input handler.py --output ./dist
 
   # Compile with deterministic mode
-  ffly compile python --input handler.py --output ./dist --mode deterministic
+  ff compile python --input handler.py --output ./dist --mode deterministic
 
   # Compile with verbose output
-  ffly compile python -i handler.py -o ./dist -v`,
+  ff compile python -i handler.py -o ./dist -v`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCompilePython(cmd)

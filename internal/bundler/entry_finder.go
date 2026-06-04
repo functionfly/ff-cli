@@ -3,7 +3,7 @@ package bundler
 import (
 	"path/filepath"
 
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // findEntryFile locates the entry file based on manifest configuration and available files.

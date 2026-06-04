@@ -1,50 +1,58 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"runtime"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/creativeprojects/go-selfupdate"
+	"github.com/functionfly/ff-cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
-// NewSelfUpdateCmd returns the self-update command (upgrade instructions for the ffly CLI).
 func NewSelfUpdateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "self-update",
-		Short: "Show how to upgrade the ffly CLI",
-		Long: `Show instructions to upgrade the ffly CLI to the latest version.
-
-The ffly CLI does not replace its own binary. Use one of these methods:
-
-  Install script (Linux/macOS):
-    curl -fsSL https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.sh | bash
-
-  Homebrew (macOS/Linux, when tap is configured):
-    brew upgrade ffly
-
-  Scoop (Windows):
-    scoop update ffly
-
-  Chocolatey (Windows):
-    choco upgrade ffly
-
-  Manual: Download the latest release from
-  https://github.com/functionfly/fly/releases
-  and replace your ffly binary.`,
-		RunE: runSelfUpdate,
+		Short: "Update the ff CLI to the latest version",
+		Long:  `Automatically checks for a newer version of the ff CLI on GitHub and updates the binary in place.`,
+		RunE:  runSelfUpdate,
 	}
 }
 
 func runSelfUpdate(cmd *cobra.Command, args []string) error {
-	fmt.Println("Upgrade the ffly CLI using one of these methods:")
-	fmt.Println()
-	fmt.Println("  Install script (Linux/macOS):")
-	fmt.Println("    curl -fsSL https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.sh | bash")
-	fmt.Println()
-	fmt.Println("  Homebrew (when tap is configured):")
-	fmt.Println("    brew upgrade ffly")
-	fmt.Println()
-	fmt.Println("  Windows: Scoop (scoop update ffly) or Chocolatey (choco upgrade ffly)")
-	fmt.Println()
-	fmt.Println("  Releases: https://github.com/functionfly/fly/releases")
+	currentVer, err := semver.NewVersion(version.Version)
+	if err != nil {
+		currentVer = semver.MustParse("0.0.0")
+	}
+
+	slug := selfupdate.ParseSlug("functionfly/ff-cli")
+
+	latest, found, err := selfupdate.DetectLatest(context.Background(), slug)
+	if err != nil {
+		return fmt.Errorf("error detecting latest version: %w", err)
+	}
+	if !found {
+		return fmt.Errorf("no release found for %s/%s", runtime.GOOS, runtime.GOARCH)
+	}
+
+	if latest.LessOrEqual(currentVer.String()) {
+		fmt.Printf("ff is already up to date (version %s)\n", version.Version)
+		return nil
+	}
+
+	fmt.Printf("Updating ff from %s to %s...\n", currentVer.String(), latest.Version())
+
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("could not locate executable path: %w", err)
+	}
+
+	if err := selfupdate.UpdateTo(context.Background(), latest.AssetURL, latest.AssetName, exe); err != nil {
+		return fmt.Errorf("error updating binary: %w", err)
+	}
+
+	fmt.Printf("Successfully updated to version %s\n", latest.Version())
 	return nil
 }

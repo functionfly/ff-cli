@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/functionfly/fly/internal/flypy/parser"
+	"github.com/functionfly/ff-cli/internal/flypy/parser"
 )
 
 // TestEndToEndCompilation tests the full compilation pipeline

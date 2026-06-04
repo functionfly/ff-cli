@@ -101,7 +101,7 @@ func TestLoadConfig_DefaultsWhenNoFile(t *testing.T) {
 
 func TestSaveAndLoadConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	configDir := filepath.Join(tmpDir, ".functionfly")
+	configDir := filepath.Join(tmpDir, ".ff")
 	os.MkdirAll(configDir, 0700)
 
 	cfg := DefaultConfig()
@@ -123,9 +123,9 @@ func TestSaveAndLoadConfig(t *testing.T) {
 func TestApplyEnvOverrides(t *testing.T) {
 	cfg := DefaultConfig()
 
-	t.Setenv("FFLY_API_URL", "http://custom.api:8080")
-	t.Setenv("FFLY_API_TIMEOUT", "60s")
-	t.Setenv("FFLY_TELEMETRY", "true")
+	t.Setenv("FF_API_URL", "http://custom.api:8080")
+	t.Setenv("FF_API_TIMEOUT", "60s")
+	t.Setenv("FF_TELEMETRY", "true")
 
 	ApplyEnvOverrides(cfg)
 
@@ -155,10 +155,10 @@ func TestApplyEnvOverrides_TelemetryFalse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.val, func(t *testing.T) {
 			cfg := DefaultConfig()
-			t.Setenv("FFLY_TELEMETRY", tt.val)
+			t.Setenv("FF_TELEMETRY", tt.val)
 			ApplyEnvOverrides(cfg)
 			if cfg.Telemetry.Enabled != tt.want {
-				t.Errorf("FFLY_TELEMETRY=%q → Enabled = %v, want %v", tt.val, cfg.Telemetry.Enabled, tt.want)
+				t.Errorf("FF_TELEMETRY=%q → Enabled = %v, want %v", tt.val, cfg.Telemetry.Enabled, tt.want)
 			}
 		})
 	}

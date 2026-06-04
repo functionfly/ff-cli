@@ -18,7 +18,7 @@ func newBackendRemoveCmd() *cobra.Command {
 		Short: "Remove a backend",
 		Long:  `Remove an execution backend from your application.`,
 		Example: `  # Remove a backend by ID
-  ffly backend remove --app myapp --backend <backend-id>`,
+  ff backend remove --app myapp --backend <backend-id>`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runBackendRemove(cmd)

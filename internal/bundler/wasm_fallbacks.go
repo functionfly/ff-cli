@@ -3,7 +3,7 @@ package bundler
 import (
 	"fmt"
 
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // createFallbackWasmWrapper creates a fallback WASM module when compilation fails

@@ -53,25 +53,25 @@ func configPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not determine home directory: %w", err)
 	}
-	return filepath.Join(home, ".functionfly", "config.yaml"), nil
+	return filepath.Join(home, ".ff", "config.yaml"), nil
 }
 
-// ConfigPath returns the path to the global config file (~/.functionfly/config.yaml).
-// Use this when showing config location in errors or in "ffly config" output.
+// ConfigPath returns the path to the global config file (~/.ff/config.yaml).
+// Use this when showing config location in errors or in "ff config" output.
 func ConfigPath() (string, error) {
 	return configPath()
 }
 
-// ApplyEnvOverrides applies FFLY_* environment variables over the loaded config.
+// ApplyEnvOverrides applies FF_* environment variables over the loaded config.
 // Precedence: env vars > config file > defaults. Keeps behavior consistent and doc-friendly.
 func ApplyEnvOverrides(cfg *GlobalConfig) {
-	if v := os.Getenv("FFLY_API_URL"); v != "" {
+	if v := os.Getenv("FF_API_URL"); v != "" {
 		cfg.API.URL = v
 	}
-	if v := os.Getenv("FFLY_API_TIMEOUT"); v != "" {
+	if v := os.Getenv("FF_API_TIMEOUT"); v != "" {
 		cfg.API.Timeout = v
 	}
-	if v := os.Getenv("FFLY_TELEMETRY"); v != "" {
+	if v := os.Getenv("FF_TELEMETRY"); v != "" {
 		cfg.Telemetry.Enabled = v != "0" && v != "false" && v != "no"
 	}
 }
@@ -88,11 +88,11 @@ func LoadConfig() (*GlobalConfig, error) {
 			ApplyEnvOverrides(c)
 			return c, nil
 		}
-		return nil, fmt.Errorf("could not read config from %s: %w\n   → Try: ffly config reset or check FFLY_API_URL", path, err)
+		return nil, fmt.Errorf("could not read config from %s: %w\n   → Try: ff config reset or check FF_API_URL", path, err)
 	}
 	cfg := DefaultConfig()
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("could not parse config at %s: %w\n   → Try: ffly config reset", path, err)
+		return nil, fmt.Errorf("could not parse config at %s: %w\n   → Try: ff config reset", path, err)
 	}
 	ApplyEnvOverrides(cfg)
 	return cfg, nil
@@ -152,7 +152,7 @@ func LoadManifest(dir string) (*Manifest, error) {
 		}
 		return &m, nil
 	}
-	return nil, fmt.Errorf("no functionfly.jsonc found in %s\n   → Run: ffly init <name>", dir)
+	return nil, fmt.Errorf("no functionfly.jsonc found in %s\n   → Run: ff init <name>", dir)
 }
 
 func SaveManifest(dir string, m *Manifest) error {

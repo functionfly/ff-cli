@@ -55,12 +55,12 @@ When publishing from functions/functionfly (stdlib), author is forced to
 "functionfly" so all entries appear under the official namespace.
 
 Examples:
-  ffly publish-batch ./functions/functionfly
-  ffly publish-batch ./functions/functionfly --author functionfly
-  ffly publish-batch ./functions --concurrency 5
-  ffly publish-batch ./functions --dry-run
-  ffly publish-batch ./functions --conflict-strategy overwrite
-  ffly publish-batch ./functions --json`,
+  ff publish-batch ./functions/functionfly
+  ff publish-batch ./functions/functionfly --author functionfly
+  ff publish-batch ./functions --concurrency 5
+  ff publish-batch ./functions --dry-run
+  ff publish-batch ./functions --conflict-strategy overwrite
+  ff publish-batch ./functions --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := "."

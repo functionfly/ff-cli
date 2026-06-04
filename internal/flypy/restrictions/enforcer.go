@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/functionfly/fly/internal/flypy/parser"
+	"github.com/functionfly/ff-cli/internal/flypy/parser"
 )
 
 // ErrorType represents the type of restriction error

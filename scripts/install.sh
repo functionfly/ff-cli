@@ -5,14 +5,14 @@
 set -euo pipefail
 
 REPO="functionfly/fly"
-BINARY="ffly"
+BINARY="ff"
 INSTALL_DIR="${FLY_INSTALL_DIR:-/usr/local/bin}"
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
-info()  { printf "\033[1;34m[ffly]\033[0m %s\n" "$*"; }
-ok()    { printf "\033[1;32m[ffly]\033[0m %s\n" "$*"; }
-die()   { printf "\033[1;31m[ffly]\033[0m error: %s\n" "$*" >&2; exit 1; }
+info()  { printf "\033[1;34m[ff]\033[0m %s\n" "$*"; }
+ok()    { printf "\033[1;32m[ff]\033[0m %s\n" "$*"; }
+die()   { printf "\033[1;31m[ff]\033[0m error: %s\n" "$*" >&2; exit 1; }
 
 need() {
   command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
@@ -58,7 +58,7 @@ main() {
   arch="$(detect_arch)"
   version="${FLY_VERSION:-$(latest_version)}"
 
-  info "Installing ffly ${version} for ${os}/${arch}..."
+  info "Installing ff ${version} for ${os}/${arch}..."
 
   ext="tar.gz"
   [[ "$os" == "windows" ]] && ext="zip"
@@ -97,8 +97,8 @@ main() {
     sudo install -m 0755 "$bin_src" "${INSTALL_DIR}/${BINARY}"
   fi
 
-  ok "ffly ${version} installed to ${INSTALL_DIR}/${BINARY}"
-  ok "Run 'ffly --help' to get started."
+  ok "ff ${version} installed to ${INSTALL_DIR}/${BINARY}"
+  ok "Run 'ff --help' to get started."
 }
 
 main "$@"

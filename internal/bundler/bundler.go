@@ -1,7 +1,7 @@
 package bundler
 
 import (
-	"github.com/functionfly/fly/internal/manifest"
+	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
 // Bundle creates a bundled version of the function code.

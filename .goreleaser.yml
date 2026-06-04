@@ -1,115 +1,115 @@
 version: 2
 
-project_name: ffly
+project_name: ff
 
 before:
-  hooks:
-    - go mod tidy
-    - go generate ./...
+    hooks:
+        - go mod tidy
+        - go generate ./...
 
 builds:
-  - id: ffly
-    main: ./cmd/ffly
-    binary: ffly
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
-    ldflags:
-      - -s -w
-      - -X github.com/functionfly/fly/internal/version.Version={{ .Version }}
-      - -X github.com/functionfly/fly/internal/version.Commit={{ .Commit }}
-      - -X github.com/functionfly/fly/internal/version.Date={{ .Date }}
-    env:
-      - CGO_ENABLED=0
+    - id: ff
+      main: ./cmd/ff
+      binary: ff
+      goos:
+          - linux
+          - darwin
+          - windows
+      goarch:
+          - amd64
+          - arm64
+      ignore:
+          - goos: windows
+            goarch: arm64
+      ldflags:
+          - -s -w
+          - -X github.com/functionfly/ff-cli/internal/version.Version={{ .Version }}
+          - -X github.com/functionfly/ff-cli/internal/version.Commit={{ .Commit }}
+          - -X github.com/functionfly/ff-cli/internal/version.Date={{ .Date }}
+      env:
+          - CGO_ENABLED=0
 
 archives:
-  - id: default
-    formats:
-      - tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: true
-  - id: windows-zip
-    formats:
-      - zip
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: true
-    builds:
-      - ffly
+    - id: default
+      formats:
+          - tar.gz
+      name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      wrap_in_directory: true
+    - id: windows-zip
+      formats:
+          - zip
+      name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      wrap_in_directory: true
+      builds:
+          - ff
 
 nfpms:
-  - id: linux-packages
-    package_name: ffly
-    maintainer: FunctionFly <support@functionfly.com>
-    homepage: https://functionfly.com
-    description: FunctionFly CLI — Go from idea to global API in under 60 seconds
-    license: Apache-2.0
-    formats:
-      - deb
-      - rpm
-      - apk
-    bindir: /usr/local/bin
+    - id: linux-packages
+      package_name: ff
+      maintainer: FunctionFly <support@functionfly.com>
+      homepage: https://functionfly.com
+      description: FunctionFly CLI — Go from idea to global API in under 60 seconds
+      license: Apache-2.0
+      formats:
+          - deb
+          - rpm
+          - apk
+      bindir: /usr/local/bin
 
 brews:
-  - name: ffly
-    repository:
-      owner: functionfly
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    homepage: https://functionfly.com
-    description: FunctionFly CLI — Go from idea to global API in under 60 seconds
-    license: Apache-2.0
-    ids:
-      - default
-    skip_upload: auto
-    install: |
-      bin.install "ffly"
+    - name: ff
+      repository:
+          owner: functionfly
+          name: homebrew-tap
+          token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      homepage: https://functionfly.com
+      description: FunctionFly CLI — Go from idea to global API in under 60 seconds
+      license: Apache-2.0
+      ids:
+          - default
+      skip_upload: auto
+      install: |
+          bin.install "ff"
 
 checksum:
-  name_template: "checksums.txt"
-  algorithm: sha256
+    name_template: "checksums.txt"
+    algorithm: sha256
 
 release:
-  github:
-    owner: functionfly
-    name: fly
-  draft: false
-  prerelease: auto
-  name_template: "{{ .Tag }}"
-  header: |
-    ## FunctionFly CLI {{ .Tag }}
+    github:
+        owner: functionfly
+        name: ff-cli
+    draft: false
+    prerelease: auto
+    name_template: "{{ .Tag }}"
+    header: |
+        ## FunctionFly CLI {{ .Tag }}
 
-    Install the latest version:
-    ```bash
-    curl -fsSL https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.sh | bash
-    ```
+        Install the latest version:
+        ```bash
+        curl -fsSL https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/install.sh | bash
+        ```
 
 snapshot:
-  version_template: "{{ incpatch .Version }}-next"
+    version_template: "{{ incpatch .Version }}-next"
 
 changelog:
-  sort: asc
-  use: github
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-      - "^chore:"
-      - "^ci:"
-      - Merge pull request
-      - Merge branch
-  groups:
-    - title: Features
-      regexp: "^feat"
-      order: 0
-    - title: Bug Fixes
-      regexp: "^fix"
-      order: 1
-    - title: Other Changes
-      order: 999
+    sort: asc
+    use: github
+    filters:
+        exclude:
+            - "^docs:"
+            - "^test:"
+            - "^chore:"
+            - "^ci:"
+            - Merge pull request
+            - Merge branch
+    groups:
+        - title: Features
+          regexp: "^feat"
+          order: 0
+        - title: Bug Fixes
+          regexp: "^fix"
+          order: 1
+        - title: Other Changes
+          order: 999

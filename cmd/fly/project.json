@@ -1,5 +1,5 @@
 {
-  "name": "ffly-cli",
+  "name": "ff-cli",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "cmd/fly",
   "projectType": "application",
@@ -7,9 +7,9 @@
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "outputs": ["{workspaceRoot}/bin/ffly"],
+      "outputs": ["{workspaceRoot}/bin/ff"],
       "options": {
-        "command": "go build -o bin/ffly ./cmd/ffly"
+        "command": "go build -o bin/ff ./cmd/ff"
       },
       "cache": true
     },

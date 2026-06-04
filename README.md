@@ -1,28 +1,28 @@
-# ffly — FunctionFly CLI
+# ff-cli — FunctionFly CLI
 
 > Go from idea to global API in under 60 seconds.
 
-`ffly` is the official command-line tool for [FunctionFly](https://functionfly.com). Write a function, publish it, and call it from anywhere — no infra required.
+`ff` is the official command-line tool for [FunctionFly](https://functionfly.com). Write a function, publish it, and call it from anywhere — no infra required.
 
 ## Install
 
 **macOS / Linux (one-liner)**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/install.sh | bash
 ```
 
 **Homebrew**
 ```bash
 brew tap functionfly/tap
-brew install ffly
+brew install ff
 ```
 
 **Windows (PowerShell)**
 ```powershell
-iwr -useb https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/install.ps1 | iex
 ```
 
-**Download directly** — see [Releases](https://github.com/functionfly/fly/releases)
+**Download directly** — see [Releases](https://github.com/functionfly/ff-cli/releases)
 
 ---
 
@@ -30,22 +30,22 @@ iwr -useb https://raw.githubusercontent.com/functionfly/fly/main/scripts/install
 
 ```bash
 # Log in
-ffly login
+ff login
 
 # Scaffold a new function
-ffly init slugify
+ff init slugify
 
 # Run it locally
-cd slugify && ffly dev
+cd slugify && ff dev
 
 # Test it
-ffly test
+ff test
 
 # Publish to the registry
-ffly publish
+ff publish
 
 # Deploy to production
-ffly deploy --env production
+ff deploy --env production
 ```
 
 Your function is now live at `https://api.functionfly.com/fx/<you>/slugify`.
@@ -58,54 +58,54 @@ Your function is now live at `https://api.functionfly.com/fx/<you>/slugify`.
 
 | Command | Description |
 |---------|-------------|
-| `ffly login` | Authenticate with FunctionFly |
-| `ffly logout` | Clear stored credentials |
-| `ffly whoami` | Show the current authenticated user |
-| `ffly init <name>` | Scaffold a new function project |
-| `ffly dev` | Run the function locally with hot reload |
-| `ffly test` | Run tests against the local runtime |
-| `ffly publish` | Publish the function to the registry |
-| `ffly publish-batch` | Batch publish multiple functions |
-| `ffly update` | Bump the function version |
-| `ffly rollback` | Roll back to a previous version |
+| `ff login` | Authenticate with FunctionFly |
+| `ff logout` | Clear stored credentials |
+| `ff whoami` | Show the current authenticated user |
+| `ff init <name>` | Scaffold a new function project |
+| `ff dev` | Run the function locally with hot reload |
+| `ff test` | Run tests against the local runtime |
+| `ff publish` | Publish the function to the registry |
+| `ff publish-batch` | Batch publish multiple functions |
+| `ff update` | Bump the function version |
+| `ff rollback` | Roll back to a previous version |
 
 ### Deployment
 
 | Command | Description |
 |---------|-------------|
-| `ffly deploy` | Publish and promote to staging/production or start canary |
-| `ffly canary` | Manage canary deployments (`start`, `status`, `promote`, `rollback`, `cancel`, `history`) |
-| `ffly health` | Check deployed function health (supports `--watch`) |
-| `ffly logs` | Stream live execution logs |
-| `ffly stats` | View invocation stats |
+| `ff deploy` | Publish and promote to staging/production or start canary |
+| `ff canary` | Manage canary deployments (`start`, `status`, `promote`, `rollback`, `cancel`, `history`) |
+| `ff health` | Check deployed function health (supports `--watch`) |
+| `ff logs` | Stream live execution logs |
+| `ff stats` | View invocation stats |
 
 ### Configuration & Secrets
 
 | Command | Description |
 |---------|-------------|
-| `ffly config` | Show/edit CLI configuration |
-| `ffly env` | Manage environment variables (`list`, `set`, `get`, `unset`) |
-| `ffly secrets` | Manage secrets (`list`, `set`, `unset`) |
-| `ffly schedule` | Manage scheduled function executions (`set`, `list`, `get`, `remove`, `presets`, `trigger`) |
+| `ff config` | Show/edit CLI configuration |
+| `ff env` | Manage environment variables (`list`, `set`, `get`, `unset`) |
+| `ff secrets` | Manage secrets (`list`, `set`, `unset`) |
+| `ff schedule` | Manage scheduled function executions (`set`, `list`, `get`, `remove`, `presets`, `trigger`) |
 
 ### Advanced
 
 | Command | Description |
 |---------|-------------|
-| `ffly compile` | Compile functions to various formats (`python`, `rust`) |
-| `ffly flypy` | FlyPy — Deterministic Python Compiler (`build`, `deploy`, `local`) |
-| `ffly dre` | DRE (Deterministic Reliable Execution) and FXCERT operations |
-| `ffly backend` | Manage execution backends (`add`, `list`, `remove`) |
-| `ffly manifest ensure-descriptions` | Add descriptions to functionfly.jsonc files |
+| `ff compile` | Compile functions to various formats (`python`, `rust`) |
+| `ff flypy` | FlyPy — Deterministic Python Compiler (`build`, `deploy`, `local`) |
+| `ff dre` | DRE (Deterministic Reliable Execution) and FXCERT operations |
+| `ff backend` | Manage execution backends (`add`, `list`, `remove`) |
+| `ff manifest ensure-descriptions` | Add descriptions to functionfly.jsonc files |
 
 ### Utilities
 
 | Command | Description |
 |---------|-------------|
-| `ffly completion` | Generate shell completions (`bash`, `zsh`, `fish`, `powershell`) |
-| `ffly doctor` | Run environment diagnostics |
-| `ffly self-update` | Update the CLI itself |
-| `ffly changelog` | Show the CLI changelog |
+| `ff completion` | Generate shell completions (`bash`, `zsh`, `fish`, `powershell`) |
+| `ff doctor` | Run environment diagnostics |
+| `ff self-update` | Update the CLI itself |
+| `ff changelog` | Show the CLI changelog |
 
 ### Global flags
 
@@ -122,17 +122,17 @@ All commands support:
 
 The CLI reads config from (in order of precedence):
 
-1. Environment variables (prefix `FFLY_`)
+1. Environment variables (prefix `FF_`)
 2. `functionfly.jsonc` in the current directory
-3. `~/.functionfly/config.yaml`
+3. `~/.ff/config.yaml`
 
 ### Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FFLY_API_URL` | `https://api.functionfly.com` | API endpoint |
-| `FFLY_TOKEN` | — | Auth token (skips `ffly login`) |
-| `FFLY_CONFIG` | `~/.functionfly/config.yaml` | Config file path |
+| `FF_API_URL` | `https://api.functionfly.com` | API endpoint |
+| `FF_TOKEN` | — | Auth token (skips `ff login`) |
+| `FF_CONFIG` | `~/.ff/config.yaml` | Config file path |
 
 ### functionfly.jsonc
 
@@ -167,11 +167,11 @@ The function manifest uses JSONC format (JSON with comments):
 
 ```bash
 # Clone
-git clone https://github.com/functionfly/fly.git
-cd fly
+git clone https://github.com/functionfly/ff-cli.git
+cd ff-cli
 
 # Build
-go build -o ffly ./cmd/ffly
+go build -o ff ./cmd/ff
 
 # Test
 go test ./...
@@ -186,13 +186,13 @@ go test -tags integration ./...
 golangci-lint run
 
 # Run locally (no install)
-./ffly --help
+./ff --help
 ```
 
 ### Project structure
 
 ```
-cmd/fly/           # CLI entry point and commands
+cmd/ff/            # CLI entry point and commands
 internal/
 ├── bundler/       # TypeScript/JS/Python/WASM bundling
 ├── cli/           # HTTP client and config

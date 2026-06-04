@@ -11,7 +11,7 @@ func NewSecretsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "secrets",
 		Short: "Manage secrets",
-		Example: "  ffly secrets list\n  ffly secrets set API_KEY=sk-abc123\n  ffly secrets unset API_KEY",
+		Example: "  ff secrets list\n  ff secrets set API_KEY=sk-abc123\n  ff secrets unset API_KEY",
 	}
 	cmd.AddCommand(newSecretsListCmd(), newSecretsSetCmd(), newSecretsUnsetCmd())
 	return cmd
@@ -73,7 +73,7 @@ func runSecretsList(asJSON bool) error {
 	}
 	if len(secrets) == 0 {
 		fmt.Println("No secrets set.")
-		fmt.Println("   → Use: ffly secrets set KEY=value")
+		fmt.Println("   → Use: ff secrets set KEY=value")
 		return nil
 	}
 	fmt.Printf("Secrets for %s/%s:\n\n", creds.User.Username, manifest.Name)

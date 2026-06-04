@@ -3,7 +3,7 @@ package ir
 import (
 	"encoding/json"
 
-	"github.com/functionfly/fly/internal/flypy/parser"
+	"github.com/functionfly/ff-cli/internal/flypy/parser"
 )
 
 // inferType infers the IRType from a Go value

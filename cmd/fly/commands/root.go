@@ -3,36 +3,36 @@ package commands
 import (
 	"fmt"
 
-	"github.com/functionfly/fly/internal/version"
+	"github.com/functionfly/ff-cli/internal/version"
 	"github.com/spf13/cobra"
 )
 
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "ffly",
+		Use:   "ff",
 		Short: "FunctionFly CLI — publish functions to the global edge",
-		Long: `ffly is the FunctionFly developer CLI.
+		Long: `ff is the FunctionFly developer CLI.
 
 Go from idea → global API in under 60 seconds.
 
-  ffly login              Authenticate with FunctionFly
-  ffly init <name>        Scaffold a new function project
-  ffly dev                Run function locally
-  ffly publish            Publish function to the registry
-  ffly deploy --env       Publish and promote to staging or production
-  ffly deploy --canary N  Publish and start a canary at N% traffic
-  ffly canary             Manage canary deployments
-  ffly test               Test your deployed function
-  ffly health             Check deployed function health
-  ffly update <bump>      Bump function version
-  ffly stats              View usage statistics
-  ffly logs               Stream live execution logs
-  ffly rollback           Roll back to a previous version
-  ffly env                Manage environment variables
-  ffly secrets            Manage secrets
-  ffly whoami             Show current logged-in user
-  ffly logout             Clear stored credentials
-  ffly completion         Generate shell completion scripts`,
+  ff login              Authenticate with FunctionFly
+  ff init <name>        Scaffold a new function project
+  ff dev                Run function locally
+  ff publish            Publish function to the registry
+  ff deploy --env       Publish and promote to staging or production
+  ff deploy --canary N  Publish and start a canary at N% traffic
+  ff canary             Manage canary deployments
+  ff test               Test your deployed function
+  ff health             Check deployed function health
+  ff update <bump>      Bump function version
+  ff stats              View usage statistics
+  ff logs               Stream live execution logs
+  ff rollback           Roll back to a previous version
+  ff env                Manage environment variables
+  ff secrets            Manage secrets
+  ff whoami             Show current logged-in user
+  ff logout             Clear stored credentials
+  ff completion         Generate shell completion scripts`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
@@ -99,14 +99,14 @@ Go from idea → global API in under 60 seconds.
 func NewVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "Show the ffly CLI version",
-		Long: `Show version information for the ffly CLI.
+		Short: "Show the ff CLI version",
+		Long: `Show version information for the ff CLI.
 
 This displays the semantic version, git commit hash, and build date.
-Use this to verify which version of ffly you have installed.`,
-		Example: `  ffly version
-  ffly version --short  # Show only version number
-  ffly version --json   # Output as JSON`,
+Use this to verify which version of ff you have installed.`,
+		Example: `  ff version
+  ff version --short  # Show only version number
+  ff version --json   # Output as JSON`,
 		Run: func(cmd *cobra.Command, args []string) {
 			short, _ := cmd.Flags().GetBool("short")
 			asJSON, _ := cmd.Flags().GetBool("json")

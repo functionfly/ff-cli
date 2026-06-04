@@ -3,7 +3,7 @@ package verifier
 import (
 	"fmt"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 // DeterminismError represents a determinism verification error

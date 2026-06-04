@@ -3,7 +3,7 @@ package ir
 import (
 	"fmt"
 
-	"github.com/functionfly/fly/internal/flypy/parser"
+	"github.com/functionfly/ff-cli/internal/flypy/parser"
 )
 
 // Generate generates an IR module from Python AST

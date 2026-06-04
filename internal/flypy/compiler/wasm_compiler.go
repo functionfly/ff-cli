@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/functionfly/fly/internal/flypy/backend"
-	"github.com/functionfly/fly/internal/flypy/ir"
-	"github.com/functionfly/fly/internal/flypy/parser"
+	"github.com/functionfly/ff-cli/internal/flypy/backend"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/parser"
 )
 
 // CompilePython compiles Python source code to WebAssembly.

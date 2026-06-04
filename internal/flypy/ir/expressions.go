@@ -1,7 +1,7 @@
 package ir
 
 import (
-	"github.com/functionfly/fly/internal/flypy/parser"
+	"github.com/functionfly/ff-cli/internal/flypy/parser"
 )
 
 // convertExpression converts a Python AST expression to an IR Value

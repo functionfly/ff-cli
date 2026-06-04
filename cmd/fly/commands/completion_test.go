@@ -53,7 +53,7 @@ func TestCompletionCmd_ValidArgs(t *testing.T) {
 
 func TestCompletionCmd_InvalidShell(t *testing.T) {
 	// Use a minimal root to avoid -o flag collision with compile subcommands
-	root := &cobra.Command{Use: "ffly", SilenceErrors: true}
+	root := &cobra.Command{Use: "ff", SilenceErrors: true}
 	completion := NewCompletionCmd(root)
 	root.AddCommand(completion)
 

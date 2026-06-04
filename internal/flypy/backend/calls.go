@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/functionfly/fly/internal/flypy/ir"
+	"github.com/functionfly/ff-cli/internal/flypy/ir"
 )
 
 // Package backend provides Rust code generation for Python function and method calls.

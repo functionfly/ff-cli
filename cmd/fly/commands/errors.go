@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/functionfly/fly/internal/version"
+	"github.com/functionfly/ff-cli/internal/version"
 	"github.com/spf13/cobra"
 )
 

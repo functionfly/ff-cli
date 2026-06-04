@@ -21,10 +21,10 @@ func newBackendListCmd() *cobra.Command {
 This command shows all configured execution backends for an application,
 including their status, region, and health information.`,
 		Example: `  # List backends for an app
-  ffly backend list --app myapp
+  ff backend list --app myapp
 
   # List backends with JSON output
-  ffly backend list --app myapp --json`,
+  ff backend list --app myapp --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runBackendList(cmd, asJSONList)
