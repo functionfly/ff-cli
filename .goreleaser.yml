@@ -40,8 +40,6 @@ archives:
           - zip
       name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
       wrap_in_directory: true
-      targets:
-          - ff
 
 nfpms:
     - id: linux-packages
@@ -56,7 +54,7 @@ nfpms:
           - apk
       bindir: /usr/local/bin
 
-homebrew:
+brews:
     - name: ff
       repository:
           owner: functionfly
@@ -65,7 +63,7 @@ homebrew:
       homepage: https://functionfly.com
       description: FunctionFly CLI — Go from idea to global API in under 60 seconds
       license: Apache-2.0
-      targets:
+      ids:
           - default
       skip_upload: true
       install: |
