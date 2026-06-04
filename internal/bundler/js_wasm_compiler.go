@@ -35,7 +35,7 @@ type JavyCompilationConfig struct {
 func DefaultJavyCompilationConfig() *JavyCompilationConfig {
 	return &JavyCompilationConfig{
 		MaxSourceSize:         1024 * 1024, // 1MB
-		MaxCompilationTime:   60 * time.Second,
+		MaxCompilationTime:    60 * time.Second,
 		EnableEvalBlock:       true,
 		BlockedPatterns:       []string{},
 		RequireFunctionExport: true,
@@ -58,17 +58,17 @@ func validateJSSource(sourceCode []byte, config *JavyCompilationConfig) error {
 	// Block dangerous patterns if enabled
 	if config.EnableEvalBlock {
 		dangerousPatterns := []string{
-			`\beval\s*\(`,                  // eval()
-			`\bFunction\s*\(`,               // Function()
-			`\bsetTimeout\s*\(\s*["']`,    // setTimeout with string (indirect eval)
-			`\bsetInterval\s*\(\s*["']`,    // setInterval with string (indirect eval)
-			`\bexecScript\s*\(`,            // IE-specific
-			`\bnew\s+Function\s*\(`,       // new Function()
-			`\bimport\s*\(\s*["']`,        // dynamic import
-			`__proto__`,                    // prototype pollution
-			`constructor`,                  // constructor access
-			`__defineGetter__`,             // defineGetter
-			`__defineSetter__`,             // defineSetter
+			`\beval\s*\(`,               // eval()
+			`\bFunction\s*\(`,           // Function()
+			`\bsetTimeout\s*\(\s*["']`,  // setTimeout with string (indirect eval)
+			`\bsetInterval\s*\(\s*["']`, // setInterval with string (indirect eval)
+			`\bexecScript\s*\(`,         // IE-specific
+			`\bnew\s+Function\s*\(`,     // new Function()
+			`\bimport\s*\(\s*["']`,      // dynamic import
+			`__proto__`,                 // prototype pollution
+			`constructor`,               // constructor access
+			`__defineGetter__`,          // defineGetter
+			`__defineSetter__`,          // defineSetter
 		}
 
 		for _, pattern := range dangerousPatterns {

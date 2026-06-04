@@ -242,7 +242,7 @@ func ValidateExports(wasm []byte) ([]string, error) {
 		offset++
 
 		// Read section size (varint)
-		sectionSize := int(readVarint(wasm, &offset))
+		sectionSize := readVarint(wasm, &offset)
 
 		if offset+sectionSize > len(wasm) {
 			break
@@ -293,7 +293,7 @@ func parseExportSection(data []byte) []string {
 	}
 
 	// Number of exports (varint)
-	count := int(readVarint(data, &offset))
+	count := readVarint(data, &offset)
 
 	for i := 0; i < count; i++ {
 		if offset >= len(data) {
@@ -301,7 +301,7 @@ func parseExportSection(data []byte) []string {
 		}
 
 		// Read name length
-		nameLen := int(readVarint(data, &offset))
+		nameLen := readVarint(data, &offset)
 		if offset+nameLen > len(data) {
 			break
 		}

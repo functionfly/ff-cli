@@ -19,8 +19,12 @@ type MicropythonLinker struct {
 
 // NewMicropythonLinker creates a new linker instance
 func NewMicropythonLinker(userCode string, manifest *manifest.Manifest) *MicropythonLinker {
+	runtimePath := findMicropythonRuntimePath()
+	if !fileExists(runtimePath) {
+		runtimePath = getRuntimeFilePath()
+	}
 	return &MicropythonLinker{
-		runtimePath: findMicropythonRuntimePath(),
+		runtimePath: runtimePath,
 		userCode:    userCode,
 		manifest:    manifest,
 	}

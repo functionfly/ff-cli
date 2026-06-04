@@ -120,10 +120,10 @@ func TestSideEffectAnalyzer_IsIdempotent(t *testing.T) {
 				Body: []ir.Operation{
 					// Call to time.time() (external state)
 					{
-						Type:   "call",
-						Result: "",
+						Type:     "call",
+						Result:   "",
 						Operands: []ir.Value{},
-						Kind:    ir.Call,
+						Kind:     ir.Call,
 						Value: map[string]interface{}{
 							"func": "time.time",
 							"args": []ir.Value{},
@@ -153,10 +153,10 @@ func TestSideEffectAnalyzer_GetSideEffectSummary(t *testing.T) {
 				Body: []ir.Operation{
 					// I/O operation
 					{
-						Type:   "call",
-						Result: "",
+						Type:     "call",
+						Result:   "",
 						Operands: []ir.Value{},
-						Kind:    ir.Call,
+						Kind:     ir.Call,
 						Value: map[string]interface{}{
 							"func": "print",
 							"args": []ir.Value{},
@@ -164,10 +164,10 @@ func TestSideEffectAnalyzer_GetSideEffectSummary(t *testing.T) {
 					},
 					// Network operation
 					{
-						Type:   "call",
-						Result: "",
+						Type:     "call",
+						Result:   "",
 						Operands: []ir.Value{},
-						Kind:    ir.Call,
+						Kind:     ir.Call,
 						Value: map[string]interface{}{
 							"func": "requests.get",
 							"args": []ir.Value{},

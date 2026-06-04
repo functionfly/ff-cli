@@ -26,13 +26,21 @@ func BundleWithOptions(manifest *manifest.Manifest, options *BundleOptions) ([]b
 
 	switch manifest.Runtime {
 	case "node18", "node20", "deno", "bun":
+		// If WASM target is specified, try TypeScript-to-WASM compilation first
+		if options != nil && options.TargetWASM {
+			if wasmBytes, err := bundleTypeScriptWASM(manifest); err == nil {
+				return wasmBytes, nil
+			}
+		}
 		return bundleJavaScript(manifest, options)
 	case "python3.11":
 		return bundlePython(manifest)
+	case "typescript-wasm":
+		return bundleTypeScriptWASM(manifest)
 	default:
 		return nil, &RuntimeNotSupportedError{
 			Runtime:   manifest.Runtime,
-			Supported: []string{"node18", "node20", "deno", "bun", "python3.11"},
+			Supported: []string{"node18", "node20", "deno", "bun", "python3.11", "typescript-wasm"},
 		}
 	}
 }

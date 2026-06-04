@@ -9,14 +9,14 @@ import (
 
 // HealthStatsResponse is the subset of the stats API response used for health.
 type HealthStatsResponse struct {
-	FunctionID    string  `json:"function_id"`
-	Author        string  `json:"author"`
-	Name          string  `json:"name"`
-	TotalCalls    int64   `json:"total_calls"`
-	SuccessRate   float64 `json:"success_rate"`
-	AvgLatencyMs  float64 `json:"avg_latency_ms"`
-	P95LatencyMs  float64 `json:"p95_latency_ms"`
-	OverallScore  float64 `json:"overall_score"`
+	FunctionID   string  `json:"function_id"`
+	Author       string  `json:"author"`
+	Name         string  `json:"name"`
+	TotalCalls   int64   `json:"total_calls"`
+	SuccessRate  float64 `json:"success_rate"`
+	AvgLatencyMs float64 `json:"avg_latency_ms"`
+	P95LatencyMs float64 `json:"p95_latency_ms"`
+	OverallScore float64 `json:"overall_score"`
 }
 
 func NewHealthCmd() *cobra.Command {

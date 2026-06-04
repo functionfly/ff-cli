@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/functionfly/ff-cli/internal/version"
 	"github.com/spf13/cobra"
+
+	"github.com/functionfly/ff-cli/internal/version"
 )
 
 type DiagnosticResult struct {
@@ -107,7 +108,7 @@ func checkAuth() DiagnosticResult {
 		return DiagnosticResult{
 			Name:    "Authentication",
 			Status:  "error",
-			Message: fmt.Sprintf("Session expired — run: ff login"),
+			Message: "Session expired — run: ff login", //nolint:staticcheck
 		}
 	}
 	expiresIn := "never"

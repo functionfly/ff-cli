@@ -26,18 +26,18 @@ type DeployResponse struct {
 
 // Deployment represents a deployment record
 type Deployment struct {
-	ID             uuid.UUID              `json:"id"`
-	AppID          uuid.UUID              `json:"app_id"`
-	Provider       string                 `json:"provider"`
-	Region         string                 `json:"region"`
-	DeploymentID   string                 `json:"deployment_id"`
-	ArtifactKey    string                 `json:"artifact_key"`
-	Routes         []string               `json:"routes"`
-	Status         string                 `json:"status"`
-	Message        string                 `json:"message"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt      time.Time              `json:"created_at"`
-	UpdatedAt      time.Time              `json:"updated_at"`
+	ID           uuid.UUID              `json:"id"`
+	AppID        uuid.UUID              `json:"app_id"`
+	Provider     string                 `json:"provider"`
+	Region       string                 `json:"region"`
+	DeploymentID string                 `json:"deployment_id"`
+	ArtifactKey  string                 `json:"artifact_key"`
+	Routes       []string               `json:"routes"`
+	Status       string                 `json:"status"`
+	Message      string                 `json:"message"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt    time.Time              `json:"created_at"`
+	UpdatedAt    time.Time              `json:"updated_at"`
 }
 
 // ListDeploymentsResponse represents the response from listing deployments

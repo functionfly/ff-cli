@@ -12,11 +12,11 @@ import (
 
 // Config represents the local CLI configuration
 type Config struct {
-	APIURL    string    `json:"api_url"`
-	AppID     uuid.UUID `json:"app_id"`
-	AppSlug   string    `json:"app_slug"`
-	Token     string    `json:"token,omitempty"`
-	SavedAt   time.Time `json:"saved_at"`
+	APIURL  string    `json:"api_url"`
+	AppID   uuid.UUID `json:"app_id"`
+	AppSlug string    `json:"app_slug"`
+	Token   string    `json:"token,omitempty"`
+	SavedAt time.Time `json:"saved_at"`
 }
 
 // LoadConfig loads configuration from the specified path, supporting FF_CONFIG override

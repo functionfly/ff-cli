@@ -1,6 +1,5 @@
 /*
 Copyright © 2026 FunctionFly
-
 */
 package commands
 
@@ -23,7 +22,7 @@ Examples:
   ff flypy config init    # Create a new flypy.yaml config file
   ff flypy config show    # Display current configuration`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -73,9 +72,9 @@ type FlyPyConfig struct {
 
 	// Local runtime configuration
 	Local struct {
-		Port   int    `yaml:"port" json:"port"`
-		Host   string `yaml:"host" json:"host"`
-		Watch  bool   `yaml:"watch" json:"watch"`
+		Port  int    `yaml:"port" json:"port"`
+		Host  string `yaml:"host" json:"host"`
+		Watch bool   `yaml:"watch" json:"watch"`
 	} `yaml:"local" json:"local"`
 }
 

@@ -9,8 +9,8 @@ import (
 
 func NewSecretsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "secrets",
-		Short: "Manage secrets",
+		Use:     "secrets",
+		Short:   "Manage secrets",
 		Example: "  ff secrets list\n  ff secrets set API_KEY=sk-abc123\n  ff secrets unset API_KEY",
 	}
 	cmd.AddCommand(newSecretsListCmd(), newSecretsSetCmd(), newSecretsUnsetCmd())

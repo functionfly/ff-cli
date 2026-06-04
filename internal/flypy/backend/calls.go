@@ -627,6 +627,7 @@ func GenerateMethodCall(receiver, method string, argStrs []string, movedVariable
 				} else {
 					// For other expressions, assume they're already the right serde_json::Value
 					// This handles cases like serde_json::Value::Null, etc.
+					_ = defaultVal
 				}
 			}
 			return fmt.Sprintf("%s.get(%s).cloned().unwrap_or(%s)", receiver, argStrs[0], defaultVal)

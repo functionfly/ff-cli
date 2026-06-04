@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/functionfly/ff-cli/internal/flypy/artifact"
 	"github.com/functionfly/ff-cli/internal/flypy/backend"
 	"github.com/functionfly/ff-cli/internal/flypy/compiler"
@@ -16,7 +18,6 @@ import (
 	"github.com/functionfly/ff-cli/internal/flypy/parser"
 	"github.com/functionfly/ff-cli/internal/flypy/restrictions"
 	"github.com/functionfly/ff-cli/internal/flypy/verifier"
-	"github.com/sirupsen/logrus"
 )
 
 // Config holds FlyPy configuration options
@@ -289,7 +290,7 @@ func (c *Compiler) compile(ctx context.Context, source string, name string) (*Re
 		IRModule:      irModule,
 		Name:          name,
 		Version:       version,
-		SignKey:        c.config.SignKey,
+		SignKey:       c.config.SignKey,
 		Deterministic: true,
 	})
 	if err != nil {

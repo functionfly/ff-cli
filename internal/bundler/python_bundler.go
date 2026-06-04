@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+
 	"github.com/functionfly/ff-cli/internal/manifest"
 )
 
@@ -33,7 +34,25 @@ func bundlePython(manifest *manifest.Manifest) ([]byte, error) {
 		dependencies = nil
 	}
 
-	// Create bundle with metadata
+	// Detect compilation mode for this Python source
+	mode := detectCompilationMode(string(sourceCode))
+	_ = mode // mode is recorded in metadata below
+
+	// Try to use the precompiled MicroPython runtime with embedded code
+	if runtimeBytes, runtimeErr := loadMicropythonRuntime(); runtimeErr == nil {
+		if embeddedBytes, embedErr := createRuntimeWithEmbeddedCode(runtimeBytes, string(sourceCode), manifest); embedErr == nil {
+			return embeddedBytes, nil
+		}
+	}
+
+	// Try to create a production WASM module first
+	wasmBytes, wasmErr := createPythonWasmModule(string(sourceCode), manifest)
+	if wasmErr == nil && len(wasmBytes) > 0 {
+		// Production path: WASM module
+		return wasmBytes, nil
+	}
+
+	// Fallback: Create bundle with metadata
 	bundle := createPythonBundle(string(sourceCode), dependencies, manifest)
 
 	if len(bundle) == 0 {
@@ -105,8 +124,8 @@ func parseRequirementsTxt() ([]PythonDependency, error) {
 
 // PyprojectTOML represents the structure of a pyproject.toml file
 type PyprojectTOML struct {
-	Project     *ProjectSection     `toml:"project,omitempty"`
-	Tool        *ToolSection        `toml:"tool,omitempty"`
+	Project *ProjectSection `toml:"project,omitempty"`
+	Tool    *ToolSection    `toml:"tool,omitempty"`
 }
 
 // ProjectSection represents the [project] section (PEP 621)
@@ -261,7 +280,7 @@ func createPythonBundle(sourceCode string, deps []PythonDependency, manifest *ma
 		"runtime":      manifest.Runtime,
 		"entry_point":  manifest.Entry,
 		"dependencies": deps,
-		"source_hash": HashContent([]byte(sourceCode)),
+		"source_hash":  HashContent([]byte(sourceCode)),
 	}
 
 	// Convert metadata to JSON

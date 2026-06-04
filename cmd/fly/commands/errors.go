@@ -7,8 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/functionfly/ff-cli/internal/version"
 	"github.com/spf13/cobra"
+
+	"github.com/functionfly/ff-cli/internal/version"
 )
 
 // Exit codes for CLI commands.

@@ -95,7 +95,7 @@ func (r *LocalTestRunner) Validate(input string) error {
 	if err := r.runtime.Initialize(ctx, r.bundle, r.manifest); err != nil {
 		return fmt.Errorf("runtime initialization failed: %w", err)
 	}
-	defer r.runtime.Cleanup()
+	defer func() { _ = r.runtime.Cleanup() }()
 
 	// Test with provided input
 	result, err := r.runtime.Execute(ctx, input)
@@ -126,7 +126,7 @@ func (r *LocalTestRunner) Test(config TestConfig) (*TestResult, error) {
 	if err := r.runtime.Initialize(ctx, r.bundle, r.manifest); err != nil {
 		return nil, fmt.Errorf("runtime initialization failed: %w", err)
 	}
-	defer r.runtime.Cleanup()
+	defer func() { _ = r.runtime.Cleanup() }()
 
 	// Execute test
 	result, err := r.runtime.Execute(ctx, config.Input)
@@ -156,7 +156,7 @@ func (r *LocalTestRunner) Benchmark(config BenchmarkConfig) (*BenchmarkResult, e
 	if err := r.runtime.Initialize(ctx, r.bundle, r.manifest); err != nil {
 		return nil, fmt.Errorf("runtime initialization failed: %w", err)
 	}
-	defer r.runtime.Cleanup()
+	defer func() { _ = r.runtime.Cleanup() }()
 
 	// Run benchmark
 	results := make(chan *TestResult, config.Concurrency*10)

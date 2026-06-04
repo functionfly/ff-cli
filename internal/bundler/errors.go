@@ -6,6 +6,8 @@ import (
 )
 
 // BundlerError represents a base error type for bundler operations
+//
+//nolint:revive // BundlerError is kept for explicit naming consistency across the codebase
 type BundlerError struct {
 	Operation string
 	Message   string
@@ -70,10 +72,10 @@ func (e *DependencyError) Unwrap() error {
 
 // CompilationError represents errors during code compilation/bundling
 type CompilationError struct {
-	Tool     string
-	File     string
-	Output   string
-	Cause    error
+	Tool   string
+	File   string
+	Output string
+	Cause  error
 }
 
 func (e *CompilationError) Error() string {
@@ -143,8 +145,8 @@ func (e *WorkingDirectoryError) Unwrap() error {
 
 // RuntimeNotSupportedError is returned when an unsupported runtime is specified
 type RuntimeNotSupportedError struct {
-	Runtime    string
-	Supported  []string
+	Runtime   string
+	Supported []string
 }
 
 func (e *RuntimeNotSupportedError) Error() string {

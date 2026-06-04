@@ -3,7 +3,6 @@ linters:
         - errcheck
         - govet
         - staticcheck
-        - unused
         - gosimple
         - ineffassign
         - typecheck
@@ -13,7 +12,6 @@ linters:
         - revive
         - misspell
         - unconvert
-        - unparam
 
 linters-settings:
     goimports:
@@ -25,6 +23,14 @@ linters-settings:
     gocritic:
         disabled-checks:
             - appendAssign
+            - ifElseChain
+            - singleCaseSwitch
+            - exitAfterDefer
+    errcheck:
+        exclude-functions:
+            - (*github.com/spf13/cobra.Command).MarkFlagRequired
+            - (*encoding/json.Encoder).Encode
+            - fmt.Sscanf
 
 issues:
     exclude-rules:

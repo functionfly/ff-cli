@@ -202,8 +202,6 @@ func (e *PythonCodeEmbedder) calculateDataSections() {
 		Content: e.metadata + "\x00",
 	})
 
-	currentOffset += len(e.metadata) + 1
-
 	// Add any additional sections as needed
 	// Could add strings, config, etc.
 }

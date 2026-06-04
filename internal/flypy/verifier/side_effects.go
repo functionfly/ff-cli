@@ -28,11 +28,11 @@ type VariableInfo struct {
 
 // SideEffectAnalyzer analyzes side effects in IR modules
 type SideEffectAnalyzer struct {
-	Module      *ir.Module
-	Effects     []SideEffect
-	Globals     map[string]bool
-	Closures    map[string]bool
-	Variables   map[string]*VariableInfo
+	Module       *ir.Module
+	Effects      []SideEffect
+	Globals      map[string]bool
+	Closures     map[string]bool
+	Variables    map[string]*VariableInfo
 	FunctionVars map[string]map[string]*VariableInfo // function name -> variables
 }
 
@@ -248,42 +248,42 @@ func (a *SideEffectAnalyzer) isParameterMutation(fn *ir.Function, name string) b
 func (a *SideEffectAnalyzer) isNetworkOperation(funcName string) bool {
 	networkOps := map[string]bool{
 		// HTTP requests
-		"requests.get":        true,
-		"requests.post":       true,
-		"requests.put":        true,
-		"requests.delete":     true,
-		"requests.patch":      true,
-		"requests.head":       true,
-		"requests.options":    true,
-		"requests.request":    true,
-		"urllib.request.urlopen": true,
-		"urllib.request.Request": true,
-		"http.client.HTTPConnection": true,
+		"requests.get":                true,
+		"requests.post":               true,
+		"requests.put":                true,
+		"requests.delete":             true,
+		"requests.patch":              true,
+		"requests.head":               true,
+		"requests.options":            true,
+		"requests.request":            true,
+		"urllib.request.urlopen":      true,
+		"urllib.request.Request":      true,
+		"http.client.HTTPConnection":  true,
 		"http.client.HTTPSConnection": true,
 
 		// Sockets and low-level networking
-		"socket.socket":       true,
-		"socket.connect":      true,
-		"socket.bind":         true,
-		"socket.listen":       true,
-		"socket.accept":       true,
-		"socket.send":         true,
-		"socket.recv":         true,
+		"socket.socket":  true,
+		"socket.connect": true,
+		"socket.bind":    true,
+		"socket.listen":  true,
+		"socket.accept":  true,
+		"socket.send":    true,
+		"socket.recv":    true,
 
 		// WebSocket
-		"websockets.connect":  true,
+		"websockets.connect":          true,
 		"websocket.create_connection": true,
 
 		// Database connections (network)
-		"psycopg2.connect":    true,
-		"sqlite3.connect":     true, // Can be network if using network filesystems
+		"psycopg2.connect":        true,
+		"sqlite3.connect":         true, // Can be network if using network filesystems
 		"mysql.connector.connect": true,
-		"pymongo.MongoClient": true,
+		"pymongo.MongoClient":     true,
 
 		// RPC and remote calls
 		"xmlrpc.client.ServerProxy": true,
-		"grpc.insecure_channel": true,
-		"grpc.secure_channel": true,
+		"grpc.insecure_channel":     true,
+		"grpc.secure_channel":       true,
 	}
 	return networkOps[funcName]
 }
@@ -292,40 +292,40 @@ func (a *SideEffectAnalyzer) isNetworkOperation(funcName string) bool {
 func (a *SideEffectAnalyzer) isExternalStateOperation(funcName string) bool {
 	externalOps := map[string]bool{
 		// File operations
-		"open":           true,
-		"file.read":      true,
-		"file.write":     true,
-		"file.close":     true,
-		"io.open":        true,
-		"io.read":        true,
-		"io.write":       true,
+		"open":       true,
+		"file.read":  true,
+		"file.write": true,
+		"file.close": true,
+		"io.open":    true,
+		"io.read":    true,
+		"io.write":   true,
 
 		// OS operations
-		"os.open":        true,
-		"os.read":        true,
-		"os.write":        true,
-		"os.close":       true,
-		"os.remove":      true,
-		"os.rename":      true,
-		"os.mkdir":       true,
-		"os.rmdir":       true,
-		"os.listdir":     true,
-		"os.chdir":       true,
-		"os.getcwd":      true,
-		"os.environ":     true, // Environment variables
+		"os.open":    true,
+		"os.read":    true,
+		"os.write":   true,
+		"os.close":   true,
+		"os.remove":  true,
+		"os.rename":  true,
+		"os.mkdir":   true,
+		"os.rmdir":   true,
+		"os.listdir": true,
+		"os.chdir":   true,
+		"os.getcwd":  true,
+		"os.environ": true, // Environment variables
 
 		// System operations
-		"sys.exit":       true,
+		"sys.exit":         true,
 		"sys.stdout.write": true,
 		"sys.stderr.write": true,
 
 		// Time operations
-		"time.time":      true,
-		"time.sleep":     true,
-		"time.ctime":     true,
-		"time.gmtime":    true,
-		"time.localtime": true,
-		"datetime.datetime.now": true,
+		"time.time":                true,
+		"time.sleep":               true,
+		"time.ctime":               true,
+		"time.gmtime":              true,
+		"time.localtime":           true,
+		"datetime.datetime.now":    true,
 		"datetime.datetime.utcnow": true,
 
 		// Random operations
@@ -336,29 +336,29 @@ func (a *SideEffectAnalyzer) isExternalStateOperation(funcName string) bool {
 		"random.seed":    true,
 
 		// UUID generation
-		"uuid.uuid1":     true,
-		"uuid.uuid4":     true,
-		"uuid.uuid3":     true,
-		"uuid.uuid5":     true,
+		"uuid.uuid1": true,
+		"uuid.uuid4": true,
+		"uuid.uuid3": true,
+		"uuid.uuid5": true,
 
 		// Temporary files
 		"tempfile.NamedTemporaryFile": true,
-		"tempfile.TemporaryFile": true,
-		"tempfile.mkdtemp": true,
-		"tempfile.mkstemp": true,
+		"tempfile.TemporaryFile":      true,
+		"tempfile.mkdtemp":            true,
+		"tempfile.mkstemp":            true,
 
 		// File utilities
-		"shutil.copy":    true,
-		"shutil.move":    true,
-		"shutil.rmtree":  true,
-		"glob.glob":      true,
-		"pathlib.Path":   true,
-		"pathlib.Path.exists": true,
-		"pathlib.Path.read_text": true,
+		"shutil.copy":             true,
+		"shutil.move":             true,
+		"shutil.rmtree":           true,
+		"glob.glob":               true,
+		"pathlib.Path":            true,
+		"pathlib.Path.exists":     true,
+		"pathlib.Path.read_text":  true,
 		"pathlib.Path.write_text": true,
 
 		// Configuration and settings
-		"configparser.ConfigParser.read": true,
+		"configparser.ConfigParser.read":  true,
 		"configparser.ConfigParser.write": true,
 	}
 	return externalOps[funcName]
@@ -368,17 +368,17 @@ func (a *SideEffectAnalyzer) isExternalStateOperation(funcName string) bool {
 func (a *SideEffectAnalyzer) isIOOperation(funcName string) bool {
 	ioOps := map[string]bool{
 		// Console I/O
-		"print":          true,
-		"input":          true,
-		"raw_input":      true,
+		"print":     true,
+		"input":     true,
+		"raw_input": true,
 
 		// Logging
-		"logging.debug":  true,
-		"logging.info":   true,
-		"logging.warning": true,
-		"logging.error":  true,
-		"logging.critical": true,
-		"logging.log":    true,
+		"logging.debug":      true,
+		"logging.info":       true,
+		"logging.warning":    true,
+		"logging.error":      true,
+		"logging.critical":   true,
+		"logging.log":        true,
 		"logging.Logger.log": true,
 
 		// Serialization

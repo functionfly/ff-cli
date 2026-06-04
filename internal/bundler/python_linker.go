@@ -310,9 +310,7 @@ func CreateLinkerStub() ([]byte, error) {
 // Returns the fully linked WASM module ready for execution
 func LinkWithMicropython(userCode string, manifest *manifest.Manifest) ([]byte, error) {
 	// Get paths
-	_, stubWasmPath := writeTempWasm("linker-stub", func() ([]byte, error) {
-		return CreateLinkerStub()
-	})
+	_, stubWasmPath := writeTempWasm("linker-stub", CreateLinkerStub)
 	if stubWasmPath == "" {
 		return nil, fmt.Errorf("failed to create linker stub")
 	}

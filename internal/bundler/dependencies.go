@@ -18,7 +18,7 @@ func InstallDependencies(manifest *manifest.Manifest) error {
 		return NewBundlerError("dependency install", "manifest cannot be nil")
 	}
 
-	if manifest.Dependencies == nil || len(manifest.Dependencies) == 0 {
+	if len(manifest.Dependencies) == 0 {
 		// No dependencies to install
 		return nil
 	}
@@ -242,7 +242,7 @@ func ParsePackageJSONFromDir(dir string) (*PackageJSON, error) {
 
 // HasDependencies checks if the package.json has any dependencies
 func (p *PackageJSON) HasDependencies() bool {
-	return p.Dependencies != nil && len(p.Dependencies) > 0
+	return len(p.Dependencies) > 0
 }
 
 // GetAllDependencies returns all dependencies (including optional)

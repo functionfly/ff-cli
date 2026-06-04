@@ -8,8 +8,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/creativeprojects/go-selfupdate"
-	"github.com/functionfly/ff-cli/internal/version"
 	"github.com/spf13/cobra"
+
+	"github.com/functionfly/ff-cli/internal/version"
 )
 
 func NewSelfUpdateCmd() *cobra.Command {

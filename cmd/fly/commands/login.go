@@ -146,7 +146,9 @@ func generatePKCEPair() (verifier, challenge string, err error) {
 // generateState creates a cryptographically random state string.
 func generateState() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		return "fallback-state"
+	}
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
@@ -190,8 +192,7 @@ func exchangeCode(ctx context.Context, baseURL, code, redirectURI, codeVerifier 
 		var errMsg struct {
 			Error string `json:"error"`
 		}
-		json.Unmarshal(body, &errMsg)
-		if errMsg.Error != "" {
+		if err := json.Unmarshal(body, &errMsg); err == nil && errMsg.Error != "" {
 			return nil, fmt.Errorf("token exchange failed: %s", errMsg.Error)
 		}
 		return nil, fmt.Errorf("token exchange returned HTTP %d", resp.StatusCode)

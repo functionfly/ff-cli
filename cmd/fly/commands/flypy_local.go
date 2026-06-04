@@ -1,6 +1,5 @@
 /*
 Copyright © 2026 FunctionFly
-
 */
 package commands
 
@@ -15,8 +14,9 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/functionfly/ff-cli/internal/flypy"
 	"github.com/spf13/cobra"
+
+	"github.com/functionfly/ff-cli/internal/flypy"
 )
 
 // flypyLocalCmd represents the flypy local command

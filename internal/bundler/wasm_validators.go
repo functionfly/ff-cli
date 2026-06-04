@@ -40,14 +40,14 @@ type WASMValidationConfig struct {
 // DefaultWASMValidationConfig returns a default validation config
 func DefaultWASMValidationConfig() *WASMValidationConfig {
 	return &WASMValidationConfig{
-		MaxBinarySize:        10 * 1024 * 1024, // 10MB
-		RequireMemoryExport:  false,
-		AllowWASI:            true,
-		BlockedImports:       []string{},
-		MaxImports:           100,
-		MaxExports:           200,
-		MaxFunctions:         500,
-		MaxMemoryPages:       1024, // 64MB
+		MaxBinarySize:          10 * 1024 * 1024, // 10MB
+		RequireMemoryExport:    false,
+		AllowWASI:              true,
+		BlockedImports:         []string{},
+		MaxImports:             100,
+		MaxExports:             200,
+		MaxFunctions:           500,
+		MaxMemoryPages:         1024, // 64MB
 		EnableStrictValidation: false,
 	}
 }
@@ -122,11 +122,11 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read import count: %w", err)
 			}
-			if uint32(importCount) > config.MaxImports {
+			if importCount > config.MaxImports {
 				return fmt.Errorf("too many imports: %d (max: %d)", importCount, config.MaxImports)
 			}
 
-			for i := uint32(0); i < uint32(importCount); i++ {
+			for i := uint32(0); i < importCount; i++ {
 				// Validate import module and field
 				moduleLen, _, err := readVarUint32(reader)
 				if err != nil {
@@ -136,7 +136,7 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 					return fmt.Errorf("import module name too long: %d", moduleLen)
 				}
 				moduleBytes := make([]byte, moduleLen)
-				reader.Read(moduleBytes)
+				reader.Read(moduleBytes) //nolint:errcheck
 
 				fieldLen, _, err := readVarUint32(reader)
 				if err != nil {
@@ -146,7 +146,7 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 					return fmt.Errorf("import field name too long: %d", fieldLen)
 				}
 				fieldBytes := make([]byte, fieldLen)
-				reader.Read(fieldBytes)
+				reader.Read(fieldBytes) //nolint:errcheck
 
 				// Read import kind
 				kind, err := reader.ReadByte()
@@ -193,7 +193,7 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read function count: %w", err)
 			}
-			if uint32(functionCount) > config.MaxFunctions {
+			if functionCount > config.MaxFunctions {
 				return fmt.Errorf("too many functions: %d (max: %d)", functionCount, config.MaxFunctions)
 			}
 
@@ -235,11 +235,11 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 			if err != nil {
 				return fmt.Errorf("failed to read export count: %w", err)
 			}
-			if uint32(exportCount) > config.MaxExports {
+			if exportCount > config.MaxExports {
 				return fmt.Errorf("too many exports: %d (max: %d)", exportCount, config.MaxExports)
 			}
 
-			for i := uint32(0); i < uint32(exportCount); i++ {
+			for i := uint32(0); i < exportCount; i++ {
 				nameLen, _, err := readVarUint32(reader)
 				if err != nil {
 					return fmt.Errorf("failed to read export name length: %w", err)
@@ -248,7 +248,7 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 					return fmt.Errorf("export name too long: %d", nameLen)
 				}
 				nameBytes := make([]byte, nameLen)
-				reader.Read(nameBytes)
+				reader.Read(nameBytes) //nolint:errcheck
 
 				kind, err := reader.ReadByte()
 				if err != nil {
@@ -292,7 +292,7 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 				if err != nil {
 					return fmt.Errorf("failed to read code size: %w", err)
 				}
-				if uint32(codeSize) > 1024*1024 { // 1MB per function
+				if codeSize > 1024*1024 { // 1MB per function
 					return fmt.Errorf("function code too large: %d bytes", codeSize)
 				}
 				// Skip code body

@@ -20,6 +20,12 @@ func createFallbackWasmWrapper(sourceCode string, manifest *manifest.Manifest, r
 	}
 }
 
+// CreateWasmFallback is the public entry point for WASM fallback creation
+// used by the bundler when primary compilation fails
+func CreateWasmFallback(sourceCode string, manifest *manifest.Manifest, runtime string) ([]byte, error) {
+	return createFallbackWasmWrapper(sourceCode, manifest, runtime)
+}
+
 // createPythonWasmTemplateFromSource creates WAT template from source code
 func createPythonWasmTemplateFromSource(sourceCode string, manifest *manifest.Manifest) ([]byte, error) {
 	return createPythonWasmModule(sourceCode, manifest)

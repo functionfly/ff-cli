@@ -3,6 +3,8 @@ package ir
 import "fmt"
 
 // IRType represents the type of an IR value
+//
+//nolint:revive // IRType is used to avoid stuttering with package name 'ir' in some contexts, but kept for clarity
 type IRType struct {
 	Base    string  // "int", "float", "string", "bool", "list", "dict", "none", "unknown", "bytes", "object"
 	Element *IRType // For lists: element type, for dicts: value type

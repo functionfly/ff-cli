@@ -10,11 +10,11 @@ import (
 
 func NewUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update <bump>",
-		Short: "Bump the function version",
-		Long:  "Bump the version in functionfly.jsonc.\n\nBump levels: patch, minor, major, or x.y.z",
+		Use:     "update <bump>",
+		Short:   "Bump the function version",
+		Long:    "Bump the version in functionfly.jsonc.\n\nBump levels: patch, minor, major, or x.y.z",
 		Example: "  ff update patch\n  ff update minor\n  ff update major\n  ff update 2.0.0",
-		Args: cobra.MaximumNArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bump := "patch"
 			if len(args) > 0 {

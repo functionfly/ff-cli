@@ -26,9 +26,13 @@ type BundleOptions struct {
 	// npm package options
 	IncludePackages bool   // Include npm packages in bundle
 	PackageCache    string // Custom package cache path
+	// WASM compilation options
+	TargetWASM bool // Compile to WebAssembly instead of JavaScript bundle
 }
 
 // typeCheckResult contains the result of type checking
+//
+//nolint:unused
 type typeCheckResult struct {
 	Errors    []TypeError
 	HasErrors bool
@@ -159,6 +163,18 @@ func bundleJavaScript(manifest *manifest.Manifest, options *BundleOptions) ([]by
 	return bundle, nil
 }
 
+// BundleJavaScriptWASM compiles JavaScript to WASM using the available compilers
+// This is the WASM production path for JavaScript/TypeScript functions
+func BundleJavaScriptWASM(entryFile string, manifest *manifest.Manifest) ([]byte, error) {
+	// Try Javy (QuickJS) compilation first
+	if wasmBytes, err := compileJSToWasm(entryFile, manifest); err == nil {
+		return wasmBytes, nil
+	}
+
+	// Fall back to JS wrapper
+	return createJSWasmWrapper(entryFile, manifest)
+}
+
 // createBundleOptions creates BundleOptions from manifest
 func createBundleOptions(manifest *manifest.Manifest) *BundleOptions {
 	options := &BundleOptions{
@@ -201,6 +217,18 @@ func HandleNpmPackages(manifest *manifest.Manifest, options *BundleOptions, func
 		return nil, nil
 	}
 
+	// If options is nil, create from manifest
+	if options == nil {
+		options = createBundleOptions(manifest)
+	}
+
+	// Resolve npm packages
+	resolved, err := resolveNpmPackages(context.Background(), manifest.Dependencies, options.PackageCache)
+	if err != nil {
+		return nil, err
+	}
+	_ = resolved
+
 	// Determine the function directory
 	if functionDir == "" {
 		functionDir = "."
@@ -210,7 +238,7 @@ func HandleNpmPackages(manifest *manifest.Manifest, options *BundleOptions, func
 	pkgPath := filepath.Join(functionDir, "package.json")
 	if _, err := os.Stat(pkgPath); os.IsNotExist(err) {
 		// No package.json found, try manifest dependencies
-		if manifest.Dependencies != nil && len(manifest.Dependencies) > 0 {
+		if len(manifest.Dependencies) > 0 {
 			return manifest.Dependencies, nil
 		}
 		return nil, nil
@@ -290,7 +318,7 @@ func InstallNpmPackages(functionDir string, deps map[string]string) error {
 	if err != nil {
 		return err
 	}
-	defer os.Chdir(origDir)
+	defer func() { _ = os.Chdir(origDir) }()
 
 	// Change to function directory
 	if err := os.Chdir(functionDir); err != nil {
@@ -329,7 +357,7 @@ func InstallNpmPackages(functionDir string, deps map[string]string) error {
 	if err := os.WriteFile("package.json", pkgBytes, 0644); err != nil {
 		// Restore backup if exists
 		if backupPath != "" {
-			os.Rename(backupPath, "package.json")
+			_ = os.Rename(backupPath, "package.json")
 		}
 		return NewBundlerErrorWithCause("npm install", "failed to write temp package.json", err)
 	}
@@ -340,7 +368,7 @@ func InstallNpmPackages(functionDir string, deps map[string]string) error {
 	if err != nil {
 		// Restore backup if exists
 		if backupPath != "" {
-			os.Rename(backupPath, "package.json")
+			_ = os.Rename(backupPath, "package.json")
 		}
 		return NewBundlerError("npm install", fmt.Sprintf("npm install failed: %s", string(output)))
 	}
@@ -477,7 +505,9 @@ func parseTypeErrors(output string) []TypeError {
 // mustParseInt safely parses a string to int
 func mustParseInt(s string) int {
 	var n int
-	fmt.Sscanf(s, "%d", &n)
+	if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
+		return 0
+	}
 	return n
 }
 

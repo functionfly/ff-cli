@@ -1,6 +1,5 @@
 /*
 Copyright © 2026 FunctionFly
-
 */
 package commands
 
@@ -11,8 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/functionfly/ff-cli/internal/flypy"
 	"github.com/spf13/cobra"
+
+	"github.com/functionfly/ff-cli/internal/flypy"
 )
 
 // flypyBuildCmd represents the flypy build command
@@ -35,9 +35,9 @@ Examples:
 
 // flypyBuildFlags holds flags specific to the build command
 var flypyBuildFlags struct {
-	name     string
-	version  string
-	signKey  string
+	name    string
+	version string
+	signKey string
 }
 
 func init() {
@@ -113,7 +113,7 @@ func flypyBuildRun(cmd *cobra.Command, args []string) {
 
 	// Create compiler configuration
 	config := &flypy.Config{
-		Mode:     mode,
+		Mode:      mode,
 		OutputDir: flypyFlags.output,
 		Verbose:   flypyFlags.verbose,
 		SignKey:   signKey,

@@ -119,13 +119,16 @@ func (r *LocalRuntime) handleHealth(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"status":    "healthy",
 		"function":  r.artifact.Manifest.Name,
 		"version":   r.artifact.Manifest.Version,
 		"runtime":   "flypy-local",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
-	})
+	}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleInfo handles function information requests
@@ -137,7 +140,7 @@ func (r *LocalRuntime) handleInfo(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"name":             r.artifact.Manifest.Name,
 		"version":          r.artifact.Manifest.Version,
 		"deterministic":    r.artifact.Manifest.Deterministic,
@@ -145,7 +148,10 @@ func (r *LocalRuntime) handleInfo(w http.ResponseWriter, req *http.Request) {
 		"input_schema":     r.artifact.Manifest.InputSchema,
 		"output_schema":    r.artifact.Manifest.OutputSchema,
 		"determinism_hash": r.artifact.DeterminismHash,
-	})
+	}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // handleExecute handles function execution requests
@@ -182,7 +188,10 @@ func (r *LocalRuntime) handleExecute(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(output)
+	if err := json.NewEncoder(w).Encode(output); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // executeWasm executes the function using WASM runtime (wasmtime when built with cgo)

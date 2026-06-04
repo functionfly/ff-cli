@@ -32,6 +32,12 @@ func (m *SpinnerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+	case error:
+		m.mu.Lock()
+		m.result = msg
+		m.done = true
+		m.mu.Unlock()
+		return m, tea.Quit
 	}
 	return m, nil
 }
@@ -103,6 +109,12 @@ func (m *ProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+	case error:
+		m.mu.Lock()
+		m.result = msg
+		m.done = true
+		m.mu.Unlock()
+		return m, tea.Quit
 	}
 	return m, nil
 }
@@ -208,6 +220,12 @@ func (m *FileProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+	case error:
+		m.mu.Lock()
+		m.result = msg
+		m.done = true
+		m.mu.Unlock()
+		return m, tea.Quit
 	}
 	return m, nil
 }

@@ -90,7 +90,10 @@ func GenerateFunctionBody(fn *ir.Function) string {
 		body.WriteString(ctx.generateOperationWithIndent(op, 1))
 	}
 
-	// Don't add default return - functions should have explicit returns
+	// Add default return if function doesn't have explicit return
+	if !containsReturnInBody(fn.Body) {
+		body.WriteString("    serde_json::Value::Null\n")
+	}
 	body.WriteString("}\n")
 
 	return body.String()
@@ -121,6 +124,16 @@ func containsReturn(op ir.Operation) bool {
 	}
 	for _, childOp := range op.FinallyBody {
 		if containsReturn(childOp) {
+			return true
+		}
+	}
+	return false
+}
+
+// containsReturnInBody checks if the body contains any return statements
+func containsReturnInBody(ops []ir.Operation) bool {
+	for _, op := range ops {
+		if containsReturn(op) {
 			return true
 		}
 	}

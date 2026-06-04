@@ -11,9 +11,9 @@ import (
 
 // FileWatcher manages file system watching for hot reload functionality
 type FileWatcher struct {
-	watcher    *fsnotify.Watcher
+	watcher      *fsnotify.Watcher
 	watchedFiles []string
-	onChange   func(string)
+	onChange     func(string)
 }
 
 // NewFileWatcher creates a new file watcher
@@ -24,9 +24,9 @@ func NewFileWatcher(onChange func(string)) (*FileWatcher, error) {
 	}
 
 	return &FileWatcher{
-		watcher:    w,
+		watcher:      w,
 		watchedFiles: []string{},
-		onChange:   onChange,
+		onChange:     onChange,
 	}, nil
 }
 
@@ -98,7 +98,7 @@ func IdentifyWatchableFiles(runtime string) []string {
 	}
 
 	// Watch entry files based on runtime
-	entryFiles := []string{}
+	var entryFiles []string
 	switch runtime {
 	case "node18", "node20", "deno":
 		entryFiles = []string{"index.js", "main.js", "index.ts", "main.ts"}

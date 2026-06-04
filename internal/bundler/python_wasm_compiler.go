@@ -167,10 +167,14 @@ func createRuntimeWithEmbeddedCode(runtimeBytes []byte, sourceCode string, manif
   )
 )`, escapeForWAT(sourceCode), escapeForWAT(metadata), len(sourceCode))
 
-	// Compile WAT to WASM
-	wasmBytes, err := compileWATToWasm(watTemplate)
+	// Compile WAT to WASM as relocatable object for linking with precompiled runtime
+	wasmBytes, err := compileWATToWasmRelocatable(watTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile WAT to WASM: %v", err)
+		// Fallback to standard compilation if relocatable fails
+		wasmBytes, err = compileWATToWasm(watTemplate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compile WAT to WASM: %v", err)
+		}
 	}
 
 	return wasmBytes, nil

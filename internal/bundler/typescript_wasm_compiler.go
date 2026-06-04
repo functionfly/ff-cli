@@ -14,7 +14,7 @@ import (
 
 // WASM 1.0 section IDs
 const (
-	wasmSectionCustom  = 0
+	wasmSectionCustom = 0
 	wasmSectionType   = 1
 	wasmSectionImport = 2
 	wasmSectionFunc   = 3
@@ -66,9 +66,9 @@ type WASMMetadata struct {
 func DefaultTypeScriptWASMConfig() *TypeScriptWASMConfig {
 	return &TypeScriptWASMConfig{
 		Target:      "wasip1",
-		ModuleType: "esm",
-		Minify:     false,
-		SourceMap:  false,
+		ModuleType:  "esm",
+		Minify:      false,
+		SourceMap:   false,
 		TreeShaking: true,
 	}
 }
@@ -212,7 +212,8 @@ func compileJSToWASMWithConfig(jsSource string, manifest *manifest.Manifest, con
 		return wasmBytes, nil
 	}
 
-	return nil, NewBundlerError("typescript-wasm compile", "no JS-to-WASM compiler available (javy, wasm-bindgen)")
+	// Fallback: create a JS wrapper for the WASM runtime
+	return createTypeScriptWasmFallback([]byte(jsSource), manifest, config)
 }
 
 // compileWithJavy compiles JavaScript to WASM using Javy (QuickJS)
@@ -659,10 +660,10 @@ func ExtractMetadata(bundledBinary []byte) (*WASMMetadata, error) {
 	if len(bundledBinary) < len(header)+4 {
 		// Not our format, assume pure WASM
 		return &WASMMetadata{
-			HandlerName:     "handler",
-			MemoryPages:     256,
+			HandlerName:       "handler",
+			MemoryPages:       256,
 			ExportedFunctions: []string{"_start", "memory"},
-			WASITarget:      false,
+			WASITarget:        false,
 		}, nil
 	}
 
@@ -670,10 +671,10 @@ func ExtractMetadata(bundledBinary []byte) (*WASMMetadata, error) {
 	if string(bundledBinary[:len(header)]) != header {
 		// Not our format
 		return &WASMMetadata{
-			HandlerName:     "handler",
-			MemoryPages:     256,
+			HandlerName:       "handler",
+			MemoryPages:       256,
 			ExportedFunctions: []string{"_start", "memory"},
-			WASITarget:      false,
+			WASITarget:        false,
 		}, nil
 	}
 
@@ -772,10 +773,10 @@ func CompileTypeScript(source string, config *TypeScriptWASMCompilerConfig) (*Co
 		return &CompiledWASM{
 			Binary: []byte(wrapper),
 			Metadata: &WASMMetadata{
-				HandlerName:      "handler",
-				MemoryPages:      256,
+				HandlerName:       "handler",
+				MemoryPages:       256,
 				ExportedFunctions: []string{"init", "execute", "alloc", "dealloc"},
-				WASITarget:       false,
+				WASITarget:        false,
 			},
 		}, nil
 	}

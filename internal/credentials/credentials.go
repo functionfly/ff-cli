@@ -10,12 +10,12 @@ import (
 
 // Credentials represents the stored authentication information
 type Credentials struct {
-	Version    string    `json:"version"`
-	User       User      `json:"user"`
-	Token      string    `json:"token"`
-	TokenType  string    `json:"token_type"`
-	ExpiresAt  time.Time `json:"expires_at"`
-	CreatedAt  time.Time `json:"created_at"`
+	Version   string    `json:"version"`
+	User      User      `json:"user"`
+	Token     string    `json:"token"`
+	TokenType string    `json:"token_type"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // User represents the authenticated user information

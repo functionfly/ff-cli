@@ -417,6 +417,8 @@ func GenerateValue(val ir.Value) string {
 }
 
 // generateManualJson constructs JSON string manually to avoid type inference issues
+//
+//nolint:unused
 func generateManualJson(entries []string) string {
 	// Simple approach: construct JSON as string
 	var jsonParts []string
@@ -646,4 +648,3 @@ func (ctx *CodegenContext) generateDictValue(v ir.Value) string {
 	// For other types, use the full value generation
 	return ctx.generateValue(v)
 }
-

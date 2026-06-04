@@ -18,9 +18,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/functionfly/ff-cli/internal/cli"
 	artifactPkg "github.com/functionfly/ff-cli/internal/flypy/artifact"
-	"github.com/spf13/cobra"
 )
 
 // flypyDeployCmd represents the flypy deploy command

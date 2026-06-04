@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -117,7 +118,10 @@ func (h *localHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body = []byte(`"hello"`)
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(body)
+	if _, err := w.Write(body); err != nil {
+		logrus.WithError(err).Error("Failed to write response")
+		return
+	}
 	latency := time.Since(start).Milliseconds()
 	fmt.Printf("[%s] %s %s → 200 (%dms)\n", time.Now().Format("15:04:05"), r.Method, r.URL.Path, latency)
 }

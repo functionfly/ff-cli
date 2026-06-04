@@ -187,7 +187,7 @@ type NPMDist struct {
 type NPMRegistryResponse struct {
 	Name     string                  `json:"name"`
 	Versions map[string]*NPMMetadata `json:"versions"`
-	Time     map[string]interface{} `json:"time"`      // version -> ISO date string; "modified"/"created" may be string or number
+	Time     map[string]interface{}  `json:"time"`      // version -> ISO date string; "modified"/"created" may be string or number
 	DistTags map[string]string       `json:"dist-tags"` // "latest", etc.
 }
 
@@ -485,7 +485,7 @@ func (c *NPMClient) BuildDependencyTree(ctx context.Context, deps map[string]str
 				depMetadata, ok = allMetadata.Versions["v"+exactVersion]
 			}
 			if !ok {
-				c.warnf("npm: version %s not found for %s", exactVersion, depName)
+				c.warn("npm: version not found", exactVersion, depName)
 				continue
 			}
 
@@ -546,8 +546,8 @@ func (c *NPMClient) cacheFilePath(key string) (string, error) {
 // saveToCache writes to Redis (when configured) and then to local filesystem with TTL.
 func (c *NPMClient) saveToCache(ctx context.Context, key string, data []byte, ttl time.Duration) error {
 	if c.redisClient != nil {
-		if err := c.redisClient.Set(ctx, key, data, ttl).Err(); err != nil {
-			return fmt.Errorf("redis set: %w", err)
+		if err := c.saveToRedis(ctx, key, data, ttl); err != nil {
+			c.warnf("redis save failed, falling back to disk cache: %v", err)
 		}
 	}
 	if c.cacheDir == "" {
@@ -596,8 +596,8 @@ func compareSemver(v1, v2 string) int {
 	for i := 0; i < len(v1Parts) && i < len(v2Parts); i++ {
 		v1Num := 0
 		v2Num := 0
-		fmt.Sscanf(v1Parts[i], "%d", &v1Num)
-		fmt.Sscanf(v2Parts[i], "%d", &v2Num)
+		fmt.Sscanf(v1Parts[i], "%d", &v1Num) //nolint:errcheck
+		fmt.Sscanf(v2Parts[i], "%d", &v2Num) //nolint:errcheck
 
 		if v1Num < v2Num {
 			return -1
@@ -665,7 +665,7 @@ func satisfiesCaretRange(version, base string) bool {
 	}
 	baseParts := strings.Split(strings.TrimPrefix(base, "v"), ".")
 	major := 0
-	fmt.Sscanf(baseParts[0], "%d", &major)
+	fmt.Sscanf(baseParts[0], "%d", &major) //nolint:errcheck
 	upper := fmt.Sprintf("%d.0.0", major+1)
 	return compareSemver(version, upper) < 0
 }
@@ -680,8 +680,8 @@ func satisfiesTildeRange(version, base string) bool {
 		return true
 	}
 	major, minor := 0, 0
-	fmt.Sscanf(baseParts[0], "%d", &major)
-	fmt.Sscanf(baseParts[1], "%d", &minor)
+	fmt.Sscanf(baseParts[0], "%d", &major) //nolint:errcheck
+	fmt.Sscanf(baseParts[1], "%d", &minor) //nolint:errcheck
 	upper := fmt.Sprintf("%d.%d.0", major, minor+1)
 	return compareSemver(version, upper) < 0
 }

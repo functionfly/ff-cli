@@ -3,8 +3,9 @@ package commands
 import (
 	"fmt"
 
-	"github.com/functionfly/ff-cli/internal/version"
 	"github.com/spf13/cobra"
+
+	"github.com/functionfly/ff-cli/internal/version"
 )
 
 func NewRootCmd() *cobra.Command {
