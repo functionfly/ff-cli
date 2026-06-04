@@ -28,19 +28,25 @@ func newSecretsListCmd() *cobra.Command {
 }
 
 func newSecretsSetCmd() *cobra.Command {
-	return &cobra.Command{
+	var dryRun bool
+	cmd := &cobra.Command{
 		Use: "set KEY=value [KEY=value ...]", Short: "Set one or more secrets",
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error { return runSecretsSet(args) },
+		RunE: func(cmd *cobra.Command, args []string) error { return runSecretsSet(args, dryRun) },
 	}
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without applying them")
+	return cmd
 }
 
 func newSecretsUnsetCmd() *cobra.Command {
-	return &cobra.Command{
+	var dryRun bool
+	cmd := &cobra.Command{
 		Use: "unset KEY [KEY ...]", Aliases: []string{"delete", "rm"}, Short: "Remove one or more secrets",
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error { return runSecretsUnset(args) },
+		RunE: func(cmd *cobra.Command, args []string) error { return runSecretsUnset(args, dryRun) },
 	}
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without applying them")
+	return cmd
 }
 
 type SecretInfo struct {
@@ -50,11 +56,11 @@ type SecretInfo struct {
 }
 
 func runSecretsList(asJSON bool) error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -84,12 +90,24 @@ func runSecretsList(asJSON bool) error {
 	return nil
 }
 
-func runSecretsSet(pairs []string) error {
-	manifest, err := LoadManifest("")
+func runSecretsSet(pairs []string, dryRun bool) error {
+	if dryRun {
+		fmt.Println("Dry run — would set the following secrets:")
+		for _, p := range pairs {
+			parts := strings.SplitN(p, "=", 2)
+			if len(parts) < 1 {
+				continue
+			}
+			fmt.Printf("  %s=<redacted>\n", parts[0])
+		}
+		fmt.Printf("\nRun without --dry-run to apply.\n")
+		return nil
+	}
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -120,12 +138,20 @@ func runSecretsSet(pairs []string) error {
 	return nil
 }
 
-func runSecretsUnset(keys []string) error {
-	manifest, err := LoadManifest("")
+func runSecretsUnset(keys []string, dryRun bool) error {
+	if dryRun {
+		fmt.Println("Dry run — would remove the following secrets:")
+		for _, k := range keys {
+			fmt.Printf("  %s\n", k)
+		}
+		fmt.Printf("\nRun without --dry-run to apply.\n")
+		return nil
+	}
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}

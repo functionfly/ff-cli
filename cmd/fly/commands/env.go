@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -64,7 +65,7 @@ func newEnvApplyCmd() *cobra.Command {
 	var dryRun bool
 	var path string
 	cmd := &cobra.Command{
-		Use:   "apply",
+		Use:   "apply [path]",
 		Short: "Set environment variables from a .env file",
 		Long: `Read key=value pairs from a .env file (or a custom path) and set them.
 Each line in the file must be KEY=value. Lines starting with # are treated as comments.
@@ -73,7 +74,14 @@ Use --dry-run to preview the changes without applying them.`,
   ff env apply .env.staging
   ff env apply --dry-run
   ff env apply --path /path/to/.env`,
-		RunE: func(cmd *cobra.Command, args []string) error { return runEnvApply(path, dryRun) },
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			p := path
+			if p == "" && len(args) > 0 {
+				p = args[0]
+			}
+			return runEnvApply(p, dryRun)
+		},
 	}
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without applying them")
 	cmd.Flags().StringVar(&path, "path", "", "Path to .env file (default: .env in current directory)")
@@ -81,11 +89,11 @@ Use --dry-run to preview the changes without applying them.`,
 }
 
 func runEnvList(asJSON bool) error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -116,10 +124,6 @@ func runEnvList(asJSON bool) error {
 }
 
 func runEnvSet(pairs []string, dryRun bool) error {
-	manifest, err := LoadManifest("")
-	if err != nil {
-		return err
-	}
 	envVars := map[string]string{}
 	for _, pair := range pairs {
 		parts := strings.SplitN(pair, "=", 2)
@@ -140,7 +144,11 @@ func runEnvSet(pairs []string, dryRun bool) error {
 		fmt.Printf("\nRun without --dry-run to apply.\n")
 		return nil
 	}
-	creds, err := LoadCredentials()
+	creds, err := requireAuth()
+	if err != nil {
+		return err
+	}
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -159,11 +167,11 @@ func runEnvSet(pairs []string, dryRun bool) error {
 }
 
 func runEnvGet(key string) error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -185,10 +193,6 @@ func runEnvGet(key string) error {
 }
 
 func runEnvUnset(keys []string, dryRun bool) error {
-	manifest, err := LoadManifest("")
-	if err != nil {
-		return err
-	}
 	if dryRun {
 		fmt.Println("Dry run — would unset:")
 		for _, k := range keys {
@@ -197,7 +201,11 @@ func runEnvUnset(keys []string, dryRun bool) error {
 		fmt.Printf("\nRun without --dry-run to apply.\n")
 		return nil
 	}
-	creds, err := LoadCredentials()
+	creds, err := requireAuth()
+	if err != nil {
+		return err
+	}
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -218,6 +226,21 @@ func runEnvUnset(keys []string, dryRun bool) error {
 func runEnvApply(envPath string, dryRun bool) error {
 	if envPath == "" {
 		envPath = ".env"
+	}
+	absEnv, err := filepath.Abs(envPath)
+	if err != nil {
+		return fmt.Errorf("could not resolve env path %q: %w", envPath, err)
+	}
+	if info, err := os.Stat(absEnv); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("env file not found: %s\n   → Use --path to specify a different file, or create one in the current directory", absEnv)
+		}
+		return fmt.Errorf("could not access %s: %w", absEnv, err)
+	} else if info.IsDir() {
+		return fmt.Errorf("%s is a directory, expected an env file\n   → Use --path to specify a different file", absEnv)
+	}
+	if li, err := os.Lstat(absEnv); err == nil && li.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("refusing to read symlinked env file: %s", absEnv)
 	}
 	f, err := os.Open(envPath)
 	if err != nil {
@@ -262,21 +285,25 @@ func runEnvApply(envPath string, dryRun bool) error {
 		return nil
 	}
 
-	manifest, err := LoadManifest("")
-	if err != nil {
-		return err
-	}
-
 	if dryRun {
 		fmt.Printf("Dry run — would set %d variable(s) from %s:\n\n", len(pairs), filepath.Base(envPath))
-		for k, v := range pairs {
-			fmt.Printf("  %s=%s\n", k, v)
+		keys := make([]string, 0, len(pairs))
+		for k := range pairs {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			fmt.Printf("  %s=%s\n", k, pairs[k])
 		}
 		fmt.Printf("\n%d variable(s)\nRun without --dry-run to apply.\n", len(pairs))
 		return nil
 	}
 
-	creds, err := LoadCredentials()
+	creds, err := requireAuth()
+	if err != nil {
+		return err
+	}
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -297,12 +324,17 @@ func runEnvApply(envPath string, dryRun bool) error {
 	}
 
 	newCount, updCount := 0, 0
+	appliedKeys := make([]string, 0, len(pairs))
 	for k := range pairs {
 		if _, ok := existing[k]; ok {
 			updCount++
 		} else {
 			newCount++
 		}
+		appliedKeys = append(appliedKeys, k)
+	}
+	sort.Strings(appliedKeys)
+	for _, k := range appliedKeys {
 		fmt.Printf("  %s (set)\n", k)
 	}
 	fmt.Printf("\nApplied %d variable(s) from %s (%d new, %d updated)\n", len(pairs), filepath.Base(envPath), newCount, updCount)

@@ -120,7 +120,10 @@ func generateCallSwitch(fn string, argStrs []string) string {
 		if len(argStrs) == 0 {
 			return handleError("sum", ErrInvalidArguments)
 		}
-		return fmt.Sprintf("    %s.iter().sum()", argStrs[0])
+		// Annotate the result type so Rust can infer the iterator's item
+		// type when the receiver's type isn't fully constrained (e.g. when
+		// summing a literal-init vec![]).
+		return fmt.Sprintf("    %s.iter().sum::<i32>()", argStrs[0])
 	case "str":
 		if len(argStrs) == 0 {
 			return handleError("str", ErrInvalidArguments)

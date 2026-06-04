@@ -2,11 +2,11 @@ package commands
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -38,20 +38,27 @@ func NewPublishCmd() *cobra.Command {
 }
 
 type PublishResult struct {
-	FunctionID      string    `json:"function_id"`
-	Version         string    `json:"version"`
-	URL             string    `json:"url"`
-	Hash            string    `json:"hash"`
-	DeployedRegions []string  `json:"deployed_regions"`
-	DeployedAt      time.Time `json:"deployed_at"`
+	OK                 bool      `json:"ok"`
+	Function           string    `json:"function"`
+	Version            string    `json:"version"`
+	URL                string    `json:"url"`
+	Hash               string    `json:"hash"`
+	FunctionID         string    `json:"function_id"`
+	Runtime            string    `json:"runtime"`
+	BundleSize         int       `json:"bundle_size"`
+	DeployedRegions    []string  `json:"deployed_regions"`
+	DeployedAt         time.Time `json:"deployed_at"`
+	FeeCharged         bool      `json:"fee_charged"`
+	FeeAmountUSD       float64   `json:"fee_amount_usd,omitempty"`
+	VerificationStatus string    `json:"verification_status,omitempty"`
 }
 
 func runPublish(access string, force, build, dryRun, asJSON, skipTypeCheck bool) error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -109,17 +116,21 @@ func runPublish(access string, force, build, dryRun, asJSON, skipTypeCheck bool)
 	err = WithFileProgress("Uploading to registry", int64(len(bundle)), func(updater FileProgressUpdater) error {
 		updater(int64(len(bundle)), int64(len(bundle)))
 		client := NewAPIClientWithToken(creds.Token)
+		rawManifest, err := readRawManifestForPublish()
+		if err != nil {
+			return fmt.Errorf("could not read manifest: %w", err)
+		}
 		publishReq := map[string]interface{}{
 			"author":   creds.User.Username,
 			"name":     manifest.Name,
 			"version":  manifest.Version,
-			"runtime":  manifest.Runtime,
-			"bundle":   base64.StdEncoding.EncodeToString(bundle),
-			"hash":     hash,
-			"public":   isPublic,
-			"manifest": manifest,
+			"manifest": json.RawMessage(rawManifest),
+			"source": map[string]interface{}{
+				"code":    string(bundle),
+				"runtime": manifest.Runtime,
+			},
 		}
-		return client.Post("/v1/registry/publish", publishReq, &result)
+		return client.Post("/v1/functions/publish", publishReq, &result)
 	})
 	if err != nil {
 		return fmt.Errorf("publish failed: %w", err)
@@ -198,4 +209,26 @@ func accessStr(public bool) string {
 func printJSON(v interface{}) {
 	data, _ := json.MarshalIndent(v, "", "  ")
 	fmt.Println(string(data))
+}
+
+// readRawManifestForPublish reads the project's functionfly.jsonc (or .json)
+// from the current working directory and returns the JSON-with-comments
+// stripped, ready to ship to the orchestrator's /v1/functions/publish endpoint
+// (which expects the manifest as a raw JSON object, not a Go struct).
+func readRawManifestForPublish() ([]byte, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	candidates := []string{
+		filepath.Join(dir, "functionfly.jsonc"),
+		filepath.Join(dir, "functionfly.json"),
+	}
+	for _, p := range candidates {
+		data, err := os.ReadFile(p)
+		if err == nil {
+			return stripJSONCComments(data), nil
+		}
+	}
+	return nil, fmt.Errorf("no manifest file found (looked for functionfly.jsonc, functionfly.json in %s)", dir)
 }

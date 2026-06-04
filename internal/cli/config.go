@@ -54,7 +54,7 @@ func SaveConfig(config *Config, configPath string) error {
 
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(configPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -77,5 +77,5 @@ func SaveConfig(config *Config, configPath string) error {
 
 // EnsureConfigDir ensures the .ff directory exists
 func EnsureConfigDir() error {
-	return os.MkdirAll(".ff", 0755)
+	return os.MkdirAll(".ff", 0750)
 }

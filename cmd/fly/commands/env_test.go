@@ -153,8 +153,8 @@ func TestRunEnvApply_FileNotFound(t *testing.T) {
 	if err == nil {
 		t.Error("runEnvApply should error when file not found")
 	}
-	if !strings.Contains(err.Error(), "could not open") {
-		t.Errorf("error should mention 'could not open', got: %v", err)
+	if !strings.Contains(err.Error(), "env file not found") {
+		t.Errorf("error should mention 'env file not found', got: %v", err)
 	}
 }
 

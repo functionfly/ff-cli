@@ -553,7 +553,7 @@ func (c *NPMClient) saveToCache(ctx context.Context, key string, data []byte, tt
 	if c.cacheDir == "" {
 		return nil
 	}
-	if err := os.MkdirAll(c.cacheDir, 0755); err != nil {
+	if err := os.MkdirAll(c.cacheDir, 0750); err != nil {
 		return err
 	}
 	path, err := c.cacheFilePath(key)
@@ -571,7 +571,7 @@ func (c *NPMClient) saveToCache(ctx context.Context, key string, data []byte, tt
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, entryData, 0644)
+	return os.WriteFile(path, entryData, 0600)
 }
 
 // semverSort implements sort.Interface for semantic version strings

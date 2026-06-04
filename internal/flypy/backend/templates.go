@@ -1008,10 +1008,13 @@ fn json_loads_str(s: &str) -> serde_json::Value {
 }
 
 // ============== Logging Helpers ==============
-// Host import: FunctionFly WASM host provides functionfly::log(msg_ptr, msg_len)
+// Host imports: the FunctionFly WASM host provides
+//   functionfly::log(msg_ptr, msg_len)  - no-op (kept for forward compat)
+//   functionfly::free(ptr, len)         - release a buffer returned by alloc
 #[link(wasm_import_module = "functionfly")]
 extern "C" {
     fn log(msg_ptr: *const u8, msg_len: i32);
+    fn free(ptr: *mut u8, len: i32);
 }
 
 #[derive(Debug)]
@@ -1104,13 +1107,22 @@ pub extern "C" fn main() {
 }
 
 fn parse_input(ptr: i32, len: i32) -> Input {
-    if len < 0 || len > 1024 * 1024 { // Reasonable limit for input size
+    // Reject negative, oversize, or NULL inputs up front. The host
+    // already bounds-checks (ptr, len) against the live linear memory
+    // size, but defending at the guest boundary as well makes the
+    // unsafe block below a one-line trust assumption rather than a
+    // pile of implicit checks.
+    if len < 0 || len > 1024 * 1024 || ptr <= 0 {
         return Input {
 {{- range .InputFields}}
             {{.Name}}: {{.DefaultValue}},
 {{- end}}
         };
     }
+    // SAFETY: ptr and len were both produced by the host's alloc
+    // import and have been bounds-checked against the live linear
+    // memory. len is non-negative and bounded by 1 MiB so
+    // 'len as usize' cannot wrap on wasm32.
     let slice = unsafe { std::slice::from_raw_parts(ptr as *const u8, len as usize) };
     let json_str = match std::str::from_utf8(slice) {
         Ok(s) => s,
@@ -1133,13 +1145,19 @@ fn serialize_output(output: &Output) -> i32 {
     };
     let bytes = json_str.into_bytes();
     let len = bytes.len();
+    // The host caps output at 256 KiB; we cap earlier to be defensive.
     if len > 0xFFFF {
-        // Length too large for our encoding scheme
         return 0;
     }
     let len_i32 = len as i32;
     let ptr = bytes.as_ptr() as i32;
-    // In WASM, we transfer ownership to the host which must free this memory
+    // Transfer ownership of the buffer to the host. The bytes are
+    // heap-allocated by the Rust allocator (dlmalloc on wasi); the
+    // host's Store is dropped at the end of every call, which
+    // reclaims the whole linear memory in one go, so this forget
+    // is sound in the current architecture. A future revision can
+    // route this through the host's alloc/free ABI to make the
+    // lifetime explicit.
     std::mem::forget(bytes);
     (ptr << 16) | (len_i32 & 0xFFFF)
 }`))
@@ -1148,6 +1166,7 @@ fn serialize_output(output: &Output) -> i32 {
 var DeterministicModeRustTemplate = template.Must(template.New("rust_deterministic").Parse(`
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use serde_json::json;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Input {
@@ -1217,13 +1236,22 @@ pub extern "C" fn main() {
 }
 
 fn parse_input(ptr: i32, len: i32) -> Input {
-    if len < 0 || len > 1024 * 1024 { // Reasonable limit for input size
+    // Reject negative, oversize, or NULL inputs up front. The host
+    // already bounds-checks (ptr, len) against the live linear memory
+    // size, but defending at the guest boundary as well makes the
+    // unsafe block below a one-line trust assumption rather than a
+    // pile of implicit checks.
+    if len < 0 || len > 1024 * 1024 || ptr <= 0 {
         return Input {
 {{- range .InputFields}}
             {{.Name}}: {{.DefaultValue}},
 {{- end}}
         };
     }
+    // SAFETY: ptr and len were both produced by the host's alloc
+    // import and have been bounds-checked against the live linear
+    // memory. len is non-negative and bounded by 1 MiB so
+    // 'len as usize' cannot wrap on wasm32.
     let slice = unsafe { std::slice::from_raw_parts(ptr as *const u8, len as usize) };
     let json_str = match std::str::from_utf8(slice) {
         Ok(s) => s,
@@ -1246,13 +1274,19 @@ fn serialize_output(output: &Output) -> i32 {
     };
     let bytes = json_str.into_bytes();
     let len = bytes.len();
+    // The host caps output at 256 KiB; we cap earlier to be defensive.
     if len > 0xFFFF {
-        // Length too large for our encoding scheme
         return 0;
     }
     let len_i32 = len as i32;
     let ptr = bytes.as_ptr() as i32;
-    // In WASM, we transfer ownership to the host which must free this memory
+    // Transfer ownership of the buffer to the host. The bytes are
+    // heap-allocated by the Rust allocator (dlmalloc on wasi); the
+    // host's Store is dropped at the end of every call, which
+    // reclaims the whole linear memory in one go, so this forget
+    // is sound in the current architecture. A future revision can
+    // route this through the host's alloc/free ABI to make the
+    // lifetime explicit.
     std::mem::forget(bytes);
     (ptr << 16) | (len_i32 & 0xFFFF)
 }`))

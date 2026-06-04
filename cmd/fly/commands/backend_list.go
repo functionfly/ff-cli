@@ -34,7 +34,7 @@ including their status, region, and health information.`,
 	cmd.Flags().StringVar(&appName, "app", "", "Application name (required)")
 	cmd.Flags().BoolVar(&asJSONList, "json", false, "Output as JSON")
 
-	cmd.MarkFlagRequired("app")
+	_ = cmd.MarkFlagRequired("app")
 
 	return cmd
 }

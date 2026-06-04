@@ -27,12 +27,12 @@ func compileWATToWasmWithOptions(watContent string, relocatable bool) ([]byte, e
 
 	// Clean up temp files on exit
 	defer func() {
-		os.Remove(watFile)
-		os.Remove(wasmFile)
+		_ = os.Remove(watFile)  //nolint:errcheck
+		_ = os.Remove(wasmFile) //nolint:errcheck
 	}()
 
 	// Write WAT content to temp file
-	if err := os.WriteFile(watFile, []byte(watContent), 0644); err != nil {
+	if err := os.WriteFile(watFile, []byte(watContent), 0600); err != nil {
 		return nil, fmt.Errorf("failed to write WAT file: %v", err)
 	}
 

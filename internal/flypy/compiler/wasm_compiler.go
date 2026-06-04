@@ -10,7 +10,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/functionfly/ff-cli/internal/flypy/backend"
 	"github.com/functionfly/ff-cli/internal/flypy/ir"
@@ -99,6 +102,18 @@ func CompileRustWithMode(source string, target string, mode string) ([]byte, err
 // The context is propagated to the cargo subprocess so cancellation and timeouts
 // are properly honored, preventing orphaned build processes.
 func CompileRustWithModeCtx(ctx context.Context, source string, target string, mode string) ([]byte, error) {
+	return compileRustWithMode(ctx, source, target, mode, nil)
+}
+
+// CompileRustWithModeCtxWithLog is like CompileRustWithModeCtx but writes any
+// cargo stderr output to the provided logger at debug level. The full cargo
+// output is never returned to the caller to avoid leaking generated source
+// into user-facing error messages.
+func CompileRustWithModeCtxWithLog(ctx context.Context, source string, target string, mode string, log *logrus.Logger) ([]byte, error) {
+	return compileRustWithMode(ctx, source, target, mode, log)
+}
+
+func compileRustWithMode(ctx context.Context, source string, target string, mode string, log *logrus.Logger) ([]byte, error) {
 	// Create a temporary directory for the Rust project
 	tempDir, err := os.MkdirTemp("", "flypy-rust-*")
 	if err != nil {
@@ -108,26 +123,25 @@ func CompileRustWithModeCtx(ctx context.Context, source string, target string, m
 
 	// Create Cargo.toml with dependencies based on mode
 	cargoToml := generateCargoToml(mode)
-	if err := os.WriteFile(filepath.Join(tempDir, "Cargo.toml"), []byte(cargoToml), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "Cargo.toml"), []byte(cargoToml), 0600); err != nil {
 		return nil, fmt.Errorf("failed to write Cargo.toml: %w", err)
 	}
 
 	// Create src directory
 	srcDir := filepath.Join(tempDir, "src")
-	if err := os.MkdirAll(srcDir, 0755); err != nil {
+	if err := os.MkdirAll(srcDir, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create src directory: %w", err)
 	}
 
 	// Write lib.rs
-	if err := os.WriteFile(filepath.Join(srcDir, "lib.rs"), []byte(source), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(srcDir, "lib.rs"), []byte(source), 0600); err != nil {
 		return nil, fmt.Errorf("failed to write lib.rs: %w", err)
 	}
 
 	// Use WASI target for compilation (wasm32-wasip1)
 	wasiTarget := "wasm32-wasip1"
-	wasmBytes, err := compileWithCargoWASI(ctx, tempDir, wasiTarget)
-	if err == nil {
-		// Validate exports after successful compilation
+	wasmBytes, wasiOutput, wasiErr := compileWithCargoWASI(ctx, tempDir, wasiTarget, log)
+	if wasiErr == nil {
 		if err := ValidateEntryPoints(wasmBytes); err != nil {
 			return nil, fmt.Errorf("WASM validation failed: %w", err)
 		}
@@ -135,71 +149,100 @@ func CompileRustWithModeCtx(ctx context.Context, source string, target string, m
 	}
 
 	// Fallback: try standard wasm32-unknown-unknown target
-	wasmBytes, err = compileWithCargo(ctx, tempDir, "wasm32-unknown-unknown")
-	if err == nil {
-		// Validate exports after successful compilation
+	wasmBytes, stdOutput, stdErr := compileWithCargo(ctx, tempDir, "wasm32-unknown-unknown", log)
+	if stdErr == nil {
 		if err := ValidateEntryPoints(wasmBytes); err != nil {
 			return nil, fmt.Errorf("WASM validation failed: %w", err)
 		}
 		return wasmBytes, nil
 	}
 
-	// No fallback - compilation must succeed
-	// Note: we do NOT include the cargo output in the error to avoid leaking
-	// generated source code into logs.
-	return nil, fmt.Errorf("failed to compile WASM module: both WASI and standard compilation failed")
+	// Both targets failed. We deliberately do NOT include the cargo output
+	// in the user-facing error (the generated Rust source may be in there).
+	// The detailed cargo output is logged at debug level so operators can
+	// diagnose failures without exposing source to API consumers.
+	debugLog(log, "WASI cargo output", wasiOutput)
+	debugLog(log, "standard cargo output", stdOutput)
+	return nil, fmt.Errorf("failed to compile WASM module (WASI: %v; wasm32-unknown-unknown: %v)", wasiErr, stdErr)
 }
 
-func compileWithCargoWASI(ctx context.Context, tempDir string, target string) ([]byte, error) {
-	// Use CommandContext so the process is killed if ctx is cancelled/timed out
-	cmd := exec.CommandContext(ctx, "cargo", "build", "--release", "--target", target)
+func compileWithCargoWASI(ctx context.Context, tempDir string, target string, log *logrus.Logger) ([]byte, []byte, error) {
+	cargoPath, err := resolveCargo()
+	if err != nil {
+		return nil, nil, err
+	}
+	cmd := exec.CommandContext(ctx, cargoPath, "build", "--release", "--target", target, "--message-format=short")
 	cmd.Dir = tempDir
-	cmd.Env = append(os.Environ(), "RUSTFLAGS=-C target-feature=-crt-static")
+	cmd.Env = append(os.Environ(), "RUSTFLAGS=-C target-feature=-crt-static", "CARGO_TERM_COLOR=never")
+	cmd.Stdin = nil
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Do not include output (which may contain generated source) in the error message
-		_ = output
-		return nil, fmt.Errorf("cargo build for WASI failed: %w", err)
+		debugLog(log, "cargo build (WASI) failed", output)
+		hint := "   -> Install the WASI target with: rustup target add wasm32-wasip1"
+		if _, hasRustup := hasRustup(); !hasRustup {
+			hint = "   -> Install Rust with WASI support: https://rustup.rs"
+		}
+		return nil, output, fmt.Errorf("cargo build for WASI failed: %w%s", err, hint)
 	}
 
-	// Find the Wasm file in WASI target directory
 	wasmPath := filepath.Join(tempDir, "target", target, "release", "flypy_function.wasm")
 	if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
-		// Try with .wasm extension in different location
 		wasmPath = filepath.Join(tempDir, "target", target, "release", "deps", "flypy_function.wasm")
 		if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
-			return nil, fmt.Errorf("Wasm file not found after WASI build")
+			return nil, output, fmt.Errorf("Wasm file not found after WASI build")
 		}
 	}
 
-	return os.ReadFile(wasmPath)
+	bytes, err := os.ReadFile(wasmPath)
+	return bytes, output, err
 }
 
-func compileWithCargo(ctx context.Context, tempDir string, target string) ([]byte, error) {
-	// Use CommandContext so the process is killed if ctx is cancelled/timed out
+func compileWithCargo(ctx context.Context, tempDir string, target string, log *logrus.Logger) ([]byte, []byte, error) {
+	cargoPath, err := resolveCargo()
+	if err != nil {
+		return nil, nil, err
+	}
 	var cmd *exec.Cmd
 	if target != "" {
-		cmd = exec.CommandContext(ctx, "cargo", "build", "--release", "--target", target)
+		cmd = exec.CommandContext(ctx, cargoPath, "build", "--release", "--target", target, "--message-format=short")
 	} else {
-		cmd = exec.CommandContext(ctx, "cargo", "build", "--release")
+		cmd = exec.CommandContext(ctx, cargoPath, "build", "--release", "--message-format=short")
 	}
 
 	cmd.Dir = tempDir
+	cmd.Stdin = nil
+	cmd.Env = append(os.Environ(), "CARGO_TERM_COLOR=never")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Do not include output (which may contain generated source) in the error message
-		_ = output
-		return nil, fmt.Errorf("cargo build failed: %w", err)
+		debugLog(log, "cargo build (standard) failed", output)
+		hint := "   -> Install the WASM target with: rustup target add wasm32-unknown-unknown"
+		if _, hasRustup := hasRustup(); !hasRustup {
+			hint = "   -> Install Rust with WASI support: https://rustup.rs"
+		}
+		return nil, output, fmt.Errorf("cargo build failed: %w%s", err, hint)
 	}
 
-	// Find the Wasm file
 	wasmPath := filepath.Join(tempDir, "target", target, "release", "flypy_function.wasm")
 	if _, err := os.Stat(wasmPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Wasm file not found after standard build")
+		return nil, output, fmt.Errorf("Wasm file not found after standard build")
 	}
 
-	return os.ReadFile(wasmPath)
+	bytes, err := os.ReadFile(wasmPath)
+	return bytes, output, err
+}
+
+// debugLog writes the cargo output to the structured logger at debug level
+// if a logger is provided. The output is truncated to avoid huge logs.
+func debugLog(log *logrus.Logger, msg string, output []byte) {
+	if log == nil || len(output) == 0 {
+		return
+	}
+	const maxBytes = 8 * 1024
+	if len(output) > maxBytes {
+		output = append(output[:maxBytes], []byte("\n... (truncated)")...)
+	}
+	log.WithField("output", string(output)).Debug(msg)
 }
 
 // ValidateWasm checks if the given bytes represent a valid Wasm module
@@ -208,13 +251,11 @@ func ValidateWasm(wasm []byte) error {
 		return fmt.Errorf("Wasm module too short")
 	}
 
-	// Check magic number
 	magic := []byte{0x00, 0x61, 0x73, 0x6d}
 	if !bytes.Equal(wasm[:4], magic) {
 		return fmt.Errorf("invalid Wasm magic number")
 	}
 
-	// Check version
 	version := []byte{0x01, 0x00, 0x00, 0x00}
 	if !bytes.Equal(wasm[4:8], version) {
 		return fmt.Errorf("invalid Wasm version")
@@ -241,7 +282,6 @@ func ValidateExports(wasm []byte) ([]string, error) {
 		sectionID := wasm[offset]
 		offset++
 
-		// Read section size (varint)
 		sectionSize := readVarint(wasm, &offset)
 
 		if offset+sectionSize > len(wasm) {
@@ -267,7 +307,6 @@ func ValidateEntryPoints(wasm []byte) error {
 		return err
 	}
 
-	// Check for required entry points
 	hasEntryPoint := false
 	for _, exp := range exports {
 		if exp == "_start" || exp == "main" || exp == "handler" {
@@ -292,7 +331,6 @@ func parseExportSection(data []byte) []string {
 		return exports
 	}
 
-	// Number of exports (varint)
 	count := readVarint(data, &offset)
 
 	for i := 0; i < count; i++ {
@@ -300,24 +338,20 @@ func parseExportSection(data []byte) []string {
 			break
 		}
 
-		// Read name length
 		nameLen := readVarint(data, &offset)
 		if offset+nameLen > len(data) {
 			break
 		}
 
-		// Read name
 		name := string(data[offset : offset+nameLen])
 		exports = append(exports, name)
 		offset += nameLen
 
-		// Read export descriptor (1 byte for func/table/memory/global)
 		if offset >= len(data) {
 			break
 		}
 		offset++ // skip kind
 
-		// Read index (varint)
 		if offset < len(data) {
 			_ = readVarint(data, &offset)
 		}
@@ -361,7 +395,6 @@ func GetWasmInfo(wasm []byte) (map[string]interface{}, error) {
 	info["hash"] = ComputeDeterminismHash(wasm)
 	info["timestamp"] = time.Now().Unix()
 
-	// Parse sections to get more info
 	offset := 8 // Skip magic + version
 
 	for offset < len(wasm) {
@@ -409,19 +442,27 @@ func getSectionName(id byte) string {
 
 // CheckWasmPack checks if wasm-pack is installed
 func CheckWasmPack() (bool, error) {
-	cmd := exec.Command("wasm-pack", "--version")
-	err := cmd.Run()
+	path, err := resolveWasmPack()
 	if err != nil {
-		return false, nil // Not installed
+		return false, nil
+	}
+	cmd := exec.Command(path, "--version")
+	cmd.Stdin = nil
+	if err := cmd.Run(); err != nil {
+		return false, nil
 	}
 	return true, nil
 }
 
 // CheckCargo checks if cargo is installed
 func CheckCargo() (bool, error) {
-	cmd := exec.Command("cargo", "--version")
-	err := cmd.Run()
+	path, err := resolveCargo()
 	if err != nil {
+		return false, nil
+	}
+	cmd := exec.Command(path, "--version")
+	cmd.Stdin = nil
+	if err := cmd.Run(); err != nil {
 		return false, nil
 	}
 	return true, nil
@@ -429,7 +470,12 @@ func CheckCargo() (bool, error) {
 
 // CheckRustTarget checks if the specified Rust target is installed
 func CheckRustTarget(target string) (bool, error) {
-	cmd := exec.Command("rustup", "target", "list", "--installed")
+	path, err := resolveRustup()
+	if err != nil {
+		return false, err
+	}
+	cmd := exec.Command(path, "target", "list", "--installed")
+	cmd.Stdin = nil
 	output, err := cmd.Output()
 	if err != nil {
 		return false, err
@@ -440,6 +486,77 @@ func CheckRustTarget(target string) (bool, error) {
 
 // InstallWasmTarget installs the wasm32-unknown-unknown target
 func InstallWasmTarget() error {
-	cmd := exec.Command("rustup", "target", "add", "wasm32-unknown-unknown")
+	path, err := resolveRustup()
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(path, "target", "add", "wasm32-unknown-unknown")
+	cmd.Stdin = nil
 	return cmd.Run()
+}
+
+// hasRustup reports whether the rustup binary is on PATH.
+func hasRustup() (string, bool) {
+	path, err := resolveRustup()
+	if err != nil {
+		return "", false
+	}
+	return path, true
+}
+
+// resolveCargo returns the absolute path to cargo, resolved once.
+func resolveCargo() (string, error) {
+	if p := cachedExec("cargo"); p != "" {
+		return p, nil
+	}
+	p, err := exec.LookPath("cargo")
+	if err != nil {
+		return "", fmt.Errorf("cargo not found in PATH: %w", err)
+	}
+	cacheExec("cargo", p)
+	return p, nil
+}
+
+// resolveRustup returns the absolute path to rustup, resolved once.
+func resolveRustup() (string, error) {
+	if p := cachedExec("rustup"); p != "" {
+		return p, nil
+	}
+	p, err := exec.LookPath("rustup")
+	if err != nil {
+		return "", fmt.Errorf("rustup not found in PATH: %w", err)
+	}
+	cacheExec("rustup", p)
+	return p, nil
+}
+
+// resolveWasmPack returns the absolute path to wasm-pack, resolved once.
+func resolveWasmPack() (string, error) {
+	if p := cachedExec("wasm-pack"); p != "" {
+		return p, nil
+	}
+	p, err := exec.LookPath("wasm-pack")
+	if err != nil {
+		return "", fmt.Errorf("wasm-pack not found in PATH: %w", err)
+	}
+	cacheExec("wasm-pack", p)
+	return p, nil
+}
+
+var (
+	execPathCacheMu sync.Mutex
+	execPathCache   = map[string]string{}
+)
+
+func cacheExec(name, path string) {
+	execPathCacheMu.Lock()
+	execPathCache[name] = path
+	execPathCacheMu.Unlock()
+}
+
+func cachedExec(name string) string {
+	execPathCacheMu.Lock()
+	p := execPathCache[name]
+	execPathCacheMu.Unlock()
+	return p
 }

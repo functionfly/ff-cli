@@ -23,7 +23,14 @@ func NewLogoutCmd() *cobra.Command {
 func runLogout(force bool) error {
 	creds, err := LoadCredentials()
 	if err != nil {
-		return fmt.Errorf("not logged in — nothing to log out from\n   → Run: ff login")
+		// If there's no credentials file (or any other "no creds" case),
+		// try to clear anything that might still be on disk / in the
+		// keychain and report a clean status.
+		if delErr := DeleteCredentials(); delErr != nil {
+			return fmt.Errorf("not logged in — nothing to log out from\n   → Run: ff login")
+		}
+		fmt.Println("You're already logged out.")
+		return nil
 	}
 	// Skip prompt in non-interactive (CI) or when --force is set.
 	if !force && !YesMode && IsInteractive() {

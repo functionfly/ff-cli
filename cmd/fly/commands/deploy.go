@@ -56,11 +56,11 @@ production) or start a canary rollout. Under the hood 'ff deploy' runs
 }
 
 func runDeploy(env string, canaryPercent int, access string, force, dryRun, asJSON, skipTypeCheck bool) error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}

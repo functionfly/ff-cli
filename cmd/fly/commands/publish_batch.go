@@ -85,6 +85,15 @@ Examples:
 func runPublishBatch(dir string, concurrency int, dryRun, asJSON bool, conflictStrategy, pattern string, continueOnError bool, authorOverride string) error {
 	startTime := time.Now()
 
+	if info, err := os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			return NewCLIError(err, ExitCodeValidationError, fmt.Sprintf("directory not found: %s", dir))
+		}
+		return NewCLIError(err, ExitCodeConfigError, fmt.Sprintf("could not read %s: %v", dir, err))
+	} else if !info.IsDir() {
+		return NewCLIError(fmt.Errorf("%s is not a directory", dir), ExitCodeValidationError, "")
+	}
+
 	dirs, err := findFunctionDirs(dir, pattern)
 	if err != nil {
 		return fmt.Errorf("failed to find function directories: %w", err)
@@ -94,7 +103,7 @@ func runPublishBatch(dir string, concurrency int, dryRun, asJSON bool, conflictS
 		if !asJSON {
 			fmt.Printf("No functions found in %s\n", dir)
 		}
-		return nil
+		return NewCLIError(fmt.Errorf("no functionfly.jsonc manifests found under %s", dir), ExitCodeValidationError, "")
 	}
 
 	if !asJSON {
@@ -258,7 +267,11 @@ type BatchFunctionManifest struct {
 }
 
 func loadBatchManifest(dir string) (*BatchFunctionManifest, error) {
-	manifestPath := filepath.Join(dir, "functionfly.jsonc")
+	cleanDir, err := cleanPath(dir)
+	if err != nil {
+		return nil, fmt.Errorf("invalid directory: %w", err)
+	}
+	manifestPath := filepath.Join(cleanDir, "functionfly.jsonc")
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("manifest not found at %s: %w", manifestPath, err)
@@ -279,7 +292,11 @@ func loadBatchManifest(dir string) (*BatchFunctionManifest, error) {
 }
 
 func readRawManifest(dir string) ([]byte, error) {
-	manifestPath := filepath.Join(dir, "functionfly.jsonc")
+	cleanDir, err := cleanPath(dir)
+	if err != nil {
+		return nil, fmt.Errorf("invalid directory: %w", err)
+	}
+	manifestPath := filepath.Join(cleanDir, "functionfly.jsonc")
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, err
@@ -431,7 +448,7 @@ func publishSingleFunction(dir string, dryRun bool, conflictStrategy string, cli
 	}
 
 	var resp batchPublishResponse
-	publishPath := fmt.Sprintf("/v1/registry/publish?conflict_strategy=%s", conflictStrategy)
+	publishPath := fmt.Sprintf("/v1/functions/publish?conflict_strategy=%s", conflictStrategy)
 	if err := client.Post(publishPath, reqBody, &resp); err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("publish failed: %v", err)

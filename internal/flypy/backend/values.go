@@ -18,6 +18,49 @@ func isExceptionVariable(name string) bool {
 	return exceptionVarNames[name]
 }
 
+// isArithmeticOp reports whether op is a Python arithmetic binary operator
+// that needs numeric coercion for serde_json::Value operands.
+func isArithmeticOp(op string) bool {
+	switch op {
+	case "Add", "Sub", "Mult", "Div", "Mod", "Pow":
+		return true
+	default:
+		return false
+	}
+}
+
+// coerceToI64 renders an expression as an i64, extracting a numeric value from
+// a serde_json::Value. It tolerates non-numeric Values by falling back to 0
+// so the WASM module never panics on bad input.
+func coerceToI64(expr string) string {
+	return fmt.Sprintf("(%s.as_i64().unwrap_or(0))", expr)
+}
+
+// looksLikeValueExpr reports whether a generated Rust expression is a
+// serde_json::Value. We use this to decide whether arithmetic needs
+// numeric coercion at the use site. The rules are intentionally simple
+// (string prefix check) because the value generator emits a small set
+// of well-known patterns for Value-typed expressions.
+func looksLikeValueExpr(expr string) bool {
+	trimmed := strings.TrimSpace(expr)
+	// Explicit marker placed by the Reference generator when the local's
+	// type is serde_json::Value. The leading comment makes this case
+	// unambiguous from the variable name alone.
+	if strings.HasPrefix(trimmed, "/*Value*/") {
+		return true
+	}
+	if strings.HasPrefix(trimmed, "input.") {
+		return true
+	}
+	if strings.HasPrefix(trimmed, "json!") {
+		return true
+	}
+	if strings.Contains(trimmed, ".get(") {
+		return true
+	}
+	return false
+}
+
 // generateValue is the CodegenContext-aware value generator.
 // It uses ctx.prefixParameter for proper scoping without global state.
 func (ctx *CodegenContext) generateValue(val ir.Value) string {
@@ -50,6 +93,14 @@ func (ctx *CodegenContext) generateValue(val ir.Value) string {
 			if isExceptionVariable(str) {
 				return "\"exception\".to_string()"
 			}
+			// Annotate references to Value-typed locals so arithmetic ops
+			// can spot them without the BinOp generator having to know the
+			// original Value's source. This is a no-op for typed locals
+			// (i32, String, etc.) since as_i64 doesn't exist on them - so
+			// we only annotate when we know the type is Value.
+			if ctx.localTypes[str] == "serde_json::Value" {
+				return fmt.Sprintf("/*Value*/%s", ctx.prefixParameter(str))
+			}
 			return ctx.prefixParameter(str)
 		}
 		// Attribute access (obj.attr)
@@ -71,6 +122,24 @@ func (ctx *CodegenContext) generateValue(val ir.Value) string {
 			}
 			left := ctx.generateValue(leftVal)
 			right := ctx.generateValue(rightVal)
+			// String concatenation in Python is `+`; in Rust this is `format!()`.
+			// We detect string contexts from the inferred result type or from
+			// either operand being a string. This avoids type mismatches when
+			// concatenating a `serde_json::Value` (e.g. from `.get()`) with a
+			// string literal.
+			if op == "Add" && (val.Type == ir.IRTypeString || leftVal.Type == ir.IRTypeString || rightVal.Type == ir.IRTypeString) {
+				return fmt.Sprintf("format!(\"{}{}\", %s, %s)", left, right)
+			}
+			// Arithmetic on `serde_json::Value` requires coercing to a concrete
+			// numeric type first. We only coerce when the result type is
+			// unknown AND at least one of the operands is actually a
+			// serde_json::Value (detected by the `input.` prefix or a
+			// subscript/attribute access that the generator already wrapped).
+			if isArithmeticOp(op) && val.Type == ir.IRTypeUnknown && (looksLikeValueExpr(left) || looksLikeValueExpr(right)) {
+				l := coerceToI64(left)
+				r := coerceToI64(right)
+				return fmt.Sprintf("(%s %s %s)", l, PyOpToRustOp(op), r)
+			}
 			return fmt.Sprintf("(%s %s %s)", left, PyOpToRustOp(op), right)
 		}
 		return "0"
@@ -180,6 +249,13 @@ func (ctx *CodegenContext) generateValue(val ir.Value) string {
 
 			// Regular subscript (single index)
 			index := ctx.generateValue(indexVal)
+			// Subscript on a Value-typed receiver yields a Value. Mark the
+			// result so downstream arithmetic can coerce it correctly.
+			if valueVal.Kind == ir.Reference {
+				if name, ok := valueVal.Value.(string); ok && ctx.localTypes[name] == "serde_json::Value" {
+					return fmt.Sprintf("/*Value*/%s[%s].clone()", value, index)
+				}
+			}
 			// For serde_json::Value, we need to clone the result
 			return fmt.Sprintf("%s[%s].clone()", value, index)
 		}
@@ -251,90 +327,33 @@ func (ctx *CodegenContext) generateValue(val ir.Value) string {
 				argStrs = append(argStrs, ctx.generateValue(arg))
 			}
 
-			// Handle built-in functions
-			switch fn {
-			case "len":
-				if len(argStrs) > 0 {
-					receiver := argStrs[0]
-					// For serde_json::Value, we need to handle len differently
-					// Check if it's a known JSON value variable that could be an array
-					isJsonVar := strings.HasPrefix(receiver, "input.") || receiver == "data"
-					if isJsonVar {
-						return fmt.Sprintf("%s.as_array().map(|arr| arr.len()).unwrap_or(0)", receiver)
-					}
-					return fmt.Sprintf("%s.len()", receiver)
+			// isinstance() needs the IR Value to extract the type name
+			// (e.g. "list", "dict"); the string form would have lost that.
+			if fn == "isinstance" && len(args) >= 2 {
+				obj := argStrs[0]
+				typeName := extractTypeName(args[1])
+				switch typeName {
+				case "dict", "Dict":
+					return fmt.Sprintf("%s.is_object()", obj)
+				case "list", "List":
+					return fmt.Sprintf("%s.is_array()", obj)
+				case "str", "Str":
+					return fmt.Sprintf("%s.is_string()", obj)
+				case "int", "Int":
+					return fmt.Sprintf("%s.is_i64()", obj)
+				case "float", "Float":
+					return fmt.Sprintf("%s.is_f64()", obj)
+				case "bool", "Bool":
+					return fmt.Sprintf("%s.is_boolean()", obj)
+				default:
+					return fmt.Sprintf("true /* isinstance %s */", typeName)
 				}
-			case "str":
-				if len(argStrs) > 0 {
-					return fmt.Sprintf("format!(\"{}\", %s)", argStrs[0])
-				}
-			case "int":
-				if len(argStrs) > 0 {
-					return fmt.Sprintf("%s.parse::<i32>().unwrap_or(0)", argStrs[0])
-				}
-			case "float":
-				if len(argStrs) > 0 {
-					return fmt.Sprintf("%s.parse::<f64>().unwrap_or(0.0)", argStrs[0])
-				}
-			case "bool":
-				if len(argStrs) > 0 {
-					return fmt.Sprintf("%s as bool", argStrs[0])
-				}
-			case "list":
-				if len(argStrs) > 0 {
-					return fmt.Sprintf("%s.to_vec()", argStrs[0])
-				}
-			case "dict":
-				return "serde_json::Map::new()"
-			case "range":
-				if len(argStrs) == 1 {
-					return fmt.Sprintf("0..%s", argStrs[0])
-				} else if len(argStrs) == 2 {
-					return fmt.Sprintf("%s..%s", argStrs[0], argStrs[1])
-				} else if len(argStrs) == 3 {
-					return fmt.Sprintf("(%s..%s).step_by(%s)", argStrs[0], argStrs[1], argStrs[2])
-				}
-			case "enumerate":
-				// enumerate(iter) -> iter.enumerate()
-				if len(argStrs) > 0 {
-					return fmt.Sprintf("%s.iter().enumerate()", argStrs[0])
-				}
-			case "any":
-				if len(argStrs) > 0 {
-					return fmt.Sprintf("%s.iter().any(|x| *x)", argStrs[0])
-				}
-			case "all":
-				if len(argStrs) > 0 {
-					return fmt.Sprintf("%s.iter().all(|x| *x)", argStrs[0])
-				}
-			case "isinstance":
-				// isinstance(obj, type) -> type check in Rust
-				// The second argument is a Reference to a type name (like 'list', 'dict', etc.)
-				if len(args) >= 2 {
-					obj := argStrs[0]
-					// Extract the type name from the Reference value
-					typeName := extractTypeName(args[1])
-					// Handle different type checks
-					switch typeName {
-					case "dict", "Dict":
-						return fmt.Sprintf("%s.is_object()", obj)
-					case "list", "List":
-						return fmt.Sprintf("%s.is_array()", obj)
-					case "str", "Str":
-						return fmt.Sprintf("%s.is_string()", obj)
-					case "int", "Int":
-						return fmt.Sprintf("%s.is_i64()", obj)
-					case "float", "Float":
-						return fmt.Sprintf("%s.is_f64()", obj)
-					case "bool", "Bool":
-						return fmt.Sprintf("%s.is_boolean()", obj)
-					default:
-						return fmt.Sprintf("true /* isinstance %s */", typeName)
-					}
-				}
-			default:
-				return fmt.Sprintf("%s(%s)", fn, strings.Join(argStrs, ", "))
 			}
+
+			// The values-side call shares the same dispatcher as
+			// statement-level calls (operations.go) so that built-ins like
+			// sum, min, max, range, etc. work in expression position too.
+			return strings.TrimSpace(generateCallSwitch(fn, argStrs))
 		}
 		return "/* call */"
 	case ir.ModuleCall:

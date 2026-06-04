@@ -153,7 +153,7 @@ func createPackageJSON(deps map[string]string) error {
 }
 `
 
-	return os.WriteFile("package.json", []byte(content), 0644)
+	return os.WriteFile("package.json", []byte(content), 0600)
 }
 
 // createRequirementsTxt creates a requirements.txt file from manifest dependencies
@@ -168,7 +168,7 @@ func createRequirementsTxt(deps map[string]string) error {
 	}
 
 	content := strings.Join(lines, "\n") + "\n"
-	return os.WriteFile("requirements.txt", []byte(content), 0644)
+	return os.WriteFile("requirements.txt", []byte(content), 0600)
 }
 
 // runCommand executes a command and returns an error if it fails

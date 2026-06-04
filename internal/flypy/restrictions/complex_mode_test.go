@@ -40,11 +40,17 @@ func TestComplexModeAllowedModules(t *testing.T) {
 		{"sys", ModeComplex, true},        // Never allowed
 		{"random", ModeComplex, true},     // Never allowed
 
-		// Compatible mode - all modules allowed
+		// Compatible mode - all modules allowed (nil whitelist)
 		{"json", ModeCompatible, false},
 		{"csv", ModeCompatible, false},
-		{"os", ModeCompatible, false},     // Allowed in compatible
-		{"random", ModeCompatible, false}, // Allowed in compatible
+		{"os", ModeCompatible, false},
+		{"random", ModeCompatible, false},
+		{"sys", ModeCompatible, false},
+		{"open", ModeCompatible, false},
+		{"eval", ModeCompatible, false},
+		{"exec", ModeCompatible, false},
+		{"print", ModeCompatible, false},
+		{"input", ModeCompatible, false},
 	}
 
 	for _, tt := range tests {
@@ -52,9 +58,11 @@ func TestComplexModeAllowedModules(t *testing.T) {
 			allowedModules := GetAllowedModules(tt.mode)
 
 			if tt.mode == ModeCompatible {
-				// Compatible mode allows all modules
 				if allowedModules != nil {
-					t.Errorf("Expected nil allowedModules for compatible mode")
+					t.Errorf("Expected nil allowedModules for compatible mode, got non-nil")
+				}
+				if tt.shouldErr {
+					t.Errorf("module %s in %s mode: expected shouldErr=%v, got false (nil whitelist)", tt.module, tt.mode, tt.shouldErr)
 				}
 				return
 			}

@@ -177,7 +177,7 @@ func (c *Compiler) Compile(ctx context.Context, source string, name string) (*Re
 
 			fallbackResult.Warnings = append(fallbackResult.Warnings,
 				fmt.Sprintf("Auto-fallback: compiled with CompatibleMode (MicroPython) because %s mode failed: %s. "+
-					"CompatibleMode may have non-deterministic behavior.",
+					"CompatibleMode may have non-deterministic behavior and is not recommended for production workloads.",
 					string(c.config.Mode), errStr),
 			)
 			return fallbackResult, nil
@@ -271,7 +271,7 @@ func (c *Compiler) compile(ctx context.Context, source string, name string) (*Re
 	if c.config.Verbose {
 		log.Info("Phase 6: Compiling to Wasm")
 	}
-	wasmBytes, err := compiler.CompileRustWithModeCtx(ctx, rustCode, c.config.TargetWasm, string(c.config.Mode))
+	wasmBytes, err := compiler.CompileRustWithModeCtxWithLog(ctx, rustCode, c.config.TargetWasm, string(c.config.Mode), c.log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile Wasm: %w", err)
 	}
@@ -333,13 +333,13 @@ func validateHandlerExists(ast *parser.PythonAST) error {
 // writeOutput writes the artifact bundle to the output directory
 func (c *Compiler) writeOutput(artifact *artifact.Artifact) error {
 	// Create output directory
-	if err := os.MkdirAll(c.config.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(c.config.OutputDir, 0750); err != nil {
 		return err
 	}
 
 	// Write Wasm module
 	wasmPath := filepath.Join(c.config.OutputDir, "state_transition.wasm")
-	if err := os.WriteFile(wasmPath, artifact.WasmModule, 0644); err != nil {
+	if err := os.WriteFile(wasmPath, artifact.WasmModule, 0600); err != nil {
 		return err
 	}
 
@@ -349,7 +349,7 @@ func (c *Compiler) writeOutput(artifact *artifact.Artifact) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(manifestPath, manifestJSON, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, manifestJSON, 0600); err != nil {
 		return err
 	}
 
@@ -359,19 +359,19 @@ func (c *Compiler) writeOutput(artifact *artifact.Artifact) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(capPath, capJSON, 0644); err != nil {
+	if err := os.WriteFile(capPath, capJSON, 0600); err != nil {
 		return err
 	}
 
 	// Write determinism hash
 	hashPath := filepath.Join(c.config.OutputDir, "determinism.hash")
-	if err := os.WriteFile(hashPath, []byte(artifact.DeterminismHash), 0644); err != nil {
+	if err := os.WriteFile(hashPath, []byte(artifact.DeterminismHash), 0600); err != nil {
 		return err
 	}
 
 	// Write signature
 	sigPath := filepath.Join(c.config.OutputDir, "signature.sig")
-	if err := os.WriteFile(sigPath, artifact.Signature, 0644); err != nil {
+	if err := os.WriteFile(sigPath, artifact.Signature, 0600); err != nil {
 		return err
 	}
 

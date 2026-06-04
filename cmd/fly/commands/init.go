@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -29,7 +30,7 @@ func NewInitCmd() *cobra.Command {
 			return runInit(name, template, force)
 		},
 	}
-	cmd.Flags().StringVarP(&template, "template", "t", "hello-world", "Template (hello-world, http-api, cron-job, webhook)")
+	cmd.Flags().StringVarP(&template, "template", "t", "hello-world", "Template (hello-world, http-api, cron-job, webhook, python, typescript, javascript)")
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Overwrite existing files")
 	return cmd
 }
@@ -45,14 +46,28 @@ func runInit(name, template string, force bool) error {
 	if !isValidFunctionName(name) {
 		return fmt.Errorf("invalid function name: %q\n   → Use lowercase letters, numbers, and hyphens only; max 63 characters; no leading or trailing hyphens", name)
 	}
-	if template == "javascript" && IsInteractive() {
-		template = PromptSelect("Choose a template:", []string{"javascript", "typescript", "python"}, "javascript")
+	if !isValidTemplate(template) {
+		return fmt.Errorf("invalid template %q\n   → Supported: %s", template, strings.Join(validTemplateList(), ", "))
+	}
+	// Reject names that would escape the current directory.
+	cleaned := filepath.Clean(name)
+	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("invalid function name: %q\n   → Names cannot be '.' or '..' or start with '..'", name)
+	}
+	if filepath.IsAbs(cleaned) {
+		return fmt.Errorf("invalid function name: %q\n   → Names must be relative paths", name)
 	}
 	projectDir := filepath.Join(".", name)
+	// Resolve to an absolute path and double-check it stays inside CWD.
+	absProject, _ := filepath.Abs(projectDir)
+	absCwd, _ := filepath.Abs(".")
+	if absProject != "" && absCwd != "" && !strings.HasPrefix(absProject, absCwd+string(filepath.Separator)) && absProject != absCwd {
+		return fmt.Errorf("invalid function name: %q\n   → Resolves outside the current directory", name)
+	}
 	if _, err := os.Stat(projectDir); err == nil && !force {
 		return fmt.Errorf("directory %q already exists\n   → Use --force to overwrite", projectDir)
 	}
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
+	if err := os.MkdirAll(projectDir, 0750); err != nil {
 		return fmt.Errorf("could not create directory: %w", err)
 	}
 
@@ -64,7 +79,7 @@ func runInit(name, template string, force bool) error {
 		}
 		for filename, content := range files {
 			path := filepath.Join(projectDir, filename)
-			if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 				return fmt.Errorf("could not write %s: %w", filename, err)
 			}
 			fmt.Printf("  ✓ %s\n", filepath.Join(name, filename))
@@ -96,6 +111,21 @@ func isValidFunctionName(name string) bool {
 		}
 	}
 	return true
+}
+
+// validTemplateList returns the supported --template values in display order.
+func validTemplateList() []string {
+	return []string{"hello-world", "http-api", "cron-job", "webhook", "python", "typescript", "javascript"}
+}
+
+// isValidTemplate reports whether t is a recognized --template value.
+func isValidTemplate(t string) bool {
+	for _, v := range validTemplateList() {
+		if t == v {
+			return true
+		}
+	}
+	return false
 }
 
 func generateTemplateFiles(name, template string) (map[string]string, error) {

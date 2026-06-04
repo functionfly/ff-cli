@@ -125,7 +125,7 @@ func Save(manifest *Manifest, path string) error {
 	// Generate JSON with comments
 	content := generateJSONCWithComments(manifest)
 
-	return os.WriteFile(path, []byte(content), 0644)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
 // generateJSONCWithComments generates a JSONC-formatted manifest with helpful comments

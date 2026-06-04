@@ -136,7 +136,7 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 					return fmt.Errorf("import module name too long: %d", moduleLen)
 				}
 				moduleBytes := make([]byte, moduleLen)
-				reader.Read(moduleBytes) //nolint:errcheck
+				_, _ = reader.Read(moduleBytes) //nolint:errcheck
 
 				fieldLen, _, err := readVarUint32(reader)
 				if err != nil {
@@ -146,7 +146,7 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 					return fmt.Errorf("import field name too long: %d", fieldLen)
 				}
 				fieldBytes := make([]byte, fieldLen)
-				reader.Read(fieldBytes) //nolint:errcheck
+				_, _ = reader.Read(fieldBytes) //nolint:errcheck
 
 				// Read import kind
 				kind, err := reader.ReadByte()
@@ -248,7 +248,7 @@ func ValidateWASM(wasmBytes []byte, config *WASMValidationConfig) error {
 					return fmt.Errorf("export name too long: %d", nameLen)
 				}
 				nameBytes := make([]byte, nameLen)
-				reader.Read(nameBytes) //nolint:errcheck
+				_, _ = reader.Read(nameBytes) //nolint:errcheck
 
 				kind, err := reader.ReadByte()
 				if err != nil {

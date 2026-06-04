@@ -33,7 +33,7 @@ func GenerateRustWithMode(module *ir.Module, mode string) (string, error) {
 
 	// Generate output fields (based on return type)
 	outputFields := []Field{
-		{Name: "result", Type: "String", DefaultValue: "String::new()"},
+		{Name: "result", Type: "serde_json::Value", DefaultValue: "serde_json::Value::Null"},
 	}
 
 	// Generate the function body

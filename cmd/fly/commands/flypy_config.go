@@ -80,7 +80,10 @@ type FlyPyConfig struct {
 
 // LoadFlyPyConfig loads FlyPy configuration from flypy.yaml
 func LoadFlyPyConfig() (*FlyPyConfig, error) {
-	configPath := "flypy.yaml"
+	configPath, err := safeWritePath("flypy.yaml")
+	if err != nil {
+		return nil, err
+	}
 
 	// Check if config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -103,12 +106,17 @@ func LoadFlyPyConfig() (*FlyPyConfig, error) {
 
 // SaveFlyPyConfig saves FlyPy configuration to flypy.yaml
 func SaveFlyPyConfig(config *FlyPyConfig) error {
+	configPath, err := safeWritePath("flypy.yaml")
+	if err != nil {
+		return err
+	}
+
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile("flypy.yaml", data, 0644); err != nil {
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

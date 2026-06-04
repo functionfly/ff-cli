@@ -119,33 +119,42 @@ func ExitOnError(err error) {
 
 	code := GetExitCode(err)
 
-	// Print error to stderr
-	fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error())
+	// Print error to stderr. Avoid "Error: Error: …" duplication if the
+	// error message already starts with "Error: ".
+	msg := err.Error()
+	if !strings.HasPrefix(strings.ToLower(msg), "error:") {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", msg)
+	} else {
+		fmt.Fprintln(os.Stderr, msg)
+	}
 
 	os.Exit(code)
 }
 
 // Debug is a simple debug logging utility that writes to stderr.
-// It only outputs when debug mode is enabled.
+// It only outputs when debug mode is enabled. Sensitive values
+// (tokens, passwords, cookies) are auto-redacted.
 var Debug = func(format string, args ...interface{}) {
 	if DebugMode {
-		fmt.Fprintf(os.Stderr, "[DEBUG] "+format+"\n", args...)
+		fmt.Fprintf(os.Stderr, "[DEBUG] "+redactFormat(format)+"\n", redactArgs(args)...)
 	}
 }
 
 // Verbose is a simple verbose logging utility that writes to stderr.
-// It only outputs when verbose mode is enabled.
+// It only outputs when verbose mode is enabled. Sensitive values
+// (tokens, passwords, cookies) are auto-redacted.
 var Verbose = func(format string, args ...interface{}) {
 	if VerboseMode {
-		fmt.Fprintf(os.Stderr, "[VERBOSE] "+format+"\n", args...)
+		fmt.Fprintf(os.Stderr, "[VERBOSE] "+redactFormat(format)+"\n", redactArgs(args)...)
 	}
 }
 
 // Trace is a simple trace logging utility for HTTP debugging.
-// It only outputs when trace mode is enabled.
+// It only outputs when trace mode is enabled. Sensitive values
+// (tokens, passwords, cookies) are auto-redacted.
 var Trace = func(format string, args ...interface{}) {
 	if TraceMode {
-		fmt.Fprintf(os.Stderr, "[TRACE] "+format+"\n", args...)
+		fmt.Fprintf(os.Stderr, "[TRACE] "+redactFormat(format)+"\n", redactArgs(args)...)
 	}
 }
 
@@ -168,10 +177,12 @@ func WantJSON() bool {
 
 // InitDebugFlags initializes the debug/verbose/trace flags on a cobra command.
 // This should be called in the init() function of each command that needs these flags.
+//
+// Deprecated: the root command already wires these as PersistentFlags, so
+// adding them again on subcommands causes duplicate-flag panics. This
+// helper is kept for source-compatibility but now does nothing.
 func InitDebugFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVar(&DebugMode, "debug", false, "Enable full debug output")
-	cmd.PersistentFlags().BoolVarP(&VerboseMode, "verbose", "v", false, "Enable verbose API calls")
-	cmd.PersistentFlags().BoolVar(&TraceMode, "trace", false, "Enable HTTP trace with request/response bodies")
+	_ = cmd
 }
 
 // PrintVersion prints version information to stdout.

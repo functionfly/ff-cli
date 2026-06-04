@@ -354,7 +354,7 @@ func InstallNpmPackages(functionDir string, deps map[string]string) error {
 	}
 
 	// Write new package.json
-	if err := os.WriteFile("package.json", pkgBytes, 0644); err != nil {
+	if err := os.WriteFile("package.json", pkgBytes, 0600); err != nil {
 		// Restore backup if exists
 		if backupPath != "" {
 			_ = os.Rename(backupPath, "package.json")
@@ -439,7 +439,7 @@ func findOrCreateTsconfig(entryFile string, customTSConfig string, strictMode bo
 	// Create default tsconfig
 	defaultConfig := createDefaultTsconfig(strictMode)
 	tempFile := filepath.Join(os.TempDir(), fmt.Sprintf("functionfly-tsconfig-%d.json", os.Getpid()))
-	if err := os.WriteFile(tempFile, []byte(defaultConfig), 0644); err != nil {
+	if err := os.WriteFile(tempFile, []byte(defaultConfig), 0600); err != nil {
 		return "", err
 	}
 

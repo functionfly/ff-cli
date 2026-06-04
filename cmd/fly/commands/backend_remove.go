@@ -27,8 +27,8 @@ func newBackendRemoveCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&appName, "app", "", "Application name (required)")
 	cmd.Flags().StringVar(&backendID, "backend", "", "Backend ID to remove (required)")
-	cmd.MarkFlagRequired("app")
-	cmd.MarkFlagRequired("backend")
+	_ = cmd.MarkFlagRequired("app")
+	_ = cmd.MarkFlagRequired("backend")
 
 	return cmd
 }

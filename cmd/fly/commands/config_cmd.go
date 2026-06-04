@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -19,14 +20,13 @@ Configuration precedence (highest first):
   3. Defaults
 
 Environment variables (override config file):
-  FF_API_URL       API base URL (e.g. https://api.functionfly.com or http://localhost:8080)
-  FF_API_TIMEOUT  Request timeout (e.g. 30s)
-  FF_DEV_EMAIL    Email for dev login (ff login --dev)
-  FF_DEV_PASSWORD Password for dev login
-  FF_DEV_LOGIN=1  Force dev email/password login
-  FF_TOKEN        Bearer token (overrides stored credentials)
-  FF_TELEMETRY    Set to 0, false, or no to disable telemetry
-  FF_CONFIG       Path to config file (overrides ~/.ff/config.yaml)
+  FF_API_URL         API base URL (e.g. https://api.functionfly.com or http://localhost:8080)
+  FF_AUTH_SITE_URL   Dashboard / auth site base URL used in ff login links
+                     (default: https://functionfly.com, or http://localhost:3000 when FF_API_URL is local)
+  FF_API_TIMEOUT     Request timeout (e.g. 30s)
+  FF_TOKEN           Bearer token (overrides stored credentials)
+  FF_TELEMETRY       Set to 0, false, or no to disable telemetry
+  FF_CONFIG          Path to config file (overrides ~/.ff/config.yaml)
 
 Use "ff config" or "ff config view" to show current config and path.
 Use "ff config reset" to restore defaults (removes or overwrites config file).`
@@ -156,25 +156,58 @@ func setConfigKey(cfg *GlobalConfig, key, value string) error {
 	case "api.url":
 		cfg.API.URL = value
 	case "api.timeout":
+		if _, err := time.ParseDuration(value); err != nil {
+			return fmt.Errorf("invalid duration %q (e.g. 30s, 5m, 1h): %w", value, err)
+		}
 		cfg.API.Timeout = value
 	case "telemetry.enabled":
-		cfg.Telemetry.Enabled = value != "0" && value != "false" && value != "no"
+		b, err := parseBool(value)
+		if err != nil {
+			return fmt.Errorf("invalid boolean %q (use true/false, yes/no, 1/0): %w", value, err)
+		}
+		cfg.Telemetry.Enabled = b
 	case "dev.port":
 		port, err := strconv.Atoi(value)
 		if err != nil {
 			return fmt.Errorf("invalid port %q: %w", value, err)
 		}
+		if port < 1 || port > 65535 {
+			return fmt.Errorf("port %d out of range (1-65535)", port)
+		}
 		cfg.Dev.Port = port
 	case "dev.watch":
-		cfg.Dev.Watch = value == "1" || value == "true" || value == "yes"
+		b, err := parseBool(value)
+		if err != nil {
+			return fmt.Errorf("invalid boolean %q (use true/false, yes/no, 1/0): %w", value, err)
+		}
+		cfg.Dev.Watch = b
 	case "dev.hot_reload":
-		cfg.Dev.HotReload = value == "1" || value == "true" || value == "yes"
+		b, err := parseBool(value)
+		if err != nil {
+			return fmt.Errorf("invalid boolean %q (use true/false, yes/no, 1/0): %w", value, err)
+		}
+		cfg.Dev.HotReload = b
 	case "publish.auto_update":
-		cfg.Publish.AutoUpdate = value == "1" || value == "true" || value == "yes"
+		b, err := parseBool(value)
+		if err != nil {
+			return fmt.Errorf("invalid boolean %q (use true/false, yes/no, 1/0): %w", value, err)
+		}
+		cfg.Publish.AutoUpdate = b
 	default:
 		return fmt.Errorf("unknown config key %q — supported: api.url, api.timeout, telemetry.enabled, dev.port, dev.watch, dev.hot_reload, publish.auto_update", key)
 	}
 	return nil
+}
+
+// parseBool accepts common truthy/falsy spellings: true/false, yes/no, 1/0, on/off.
+func parseBool(s string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "1", "true", "yes", "y", "on":
+		return true, nil
+	case "0", "false", "no", "n", "off":
+		return false, nil
+	}
+	return false, fmt.Errorf("unrecognized boolean value")
 }
 
 func runConfigReset(cmd *cobra.Command, args []string) error {

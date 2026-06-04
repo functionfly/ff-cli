@@ -15,6 +15,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
+	"golang.org/x/time/rate"
 
 	"github.com/functionfly/ff-cli/internal/flypy"
 )
@@ -37,10 +38,18 @@ Examples:
 
 // flypyLocalFlags holds flags specific to the local command
 var flypyLocalFlags struct {
-	port     int
-	watch    bool
-	artifact string
-	host     string
+	port               int
+	watch              bool
+	artifact           string
+	host               string
+	authToken          string
+	verifySignature    bool
+	signaturePublicKey string
+	maxConcurrent      int
+	maxBodyBytes       int64
+	rateLimit          int
+	rateBurst          int
+	execTimeoutSecs    int
 }
 
 func init() {
@@ -51,6 +60,18 @@ func init() {
 	flypyLocalCmd.Flags().BoolVarP(&flypyLocalFlags.watch, "watch", "w", false, "Watch for changes and reload")
 	flypyLocalCmd.Flags().StringVarP(&flypyLocalFlags.artifact, "artifact", "a", "./dist", "Path to compiled artifact directory")
 	flypyLocalCmd.Flags().StringVar(&flypyLocalFlags.host, "host", "localhost", "Host to bind to")
+
+	// Security flags
+	flypyLocalCmd.Flags().StringVar(&flypyLocalFlags.authToken, "auth-token", "", "Require this bearer token on every request (Authorization: Bearer ...)")
+	flypyLocalCmd.Flags().BoolVar(&flypyLocalFlags.verifySignature, "verify-signature", false, "Verify the artifact's Ed25519 signature before execution")
+	flypyLocalCmd.Flags().StringVar(&flypyLocalFlags.signaturePublicKey, "signature-public-key", "", "Path to a 32-byte raw Ed25519 public key (required when --verify-signature is set)")
+
+	// Resource flags
+	flypyLocalCmd.Flags().IntVar(&flypyLocalFlags.maxConcurrent, "max-concurrent", 8, "Maximum concurrent handler executions")
+	flypyLocalCmd.Flags().Int64Var(&flypyLocalFlags.maxBodyBytes, "max-body-bytes", 1<<20, "Maximum request body size in bytes")
+	flypyLocalCmd.Flags().IntVar(&flypyLocalFlags.rateLimit, "rate-limit", 100, "Per-client requests per second")
+	flypyLocalCmd.Flags().IntVar(&flypyLocalFlags.rateBurst, "rate-burst", 200, "Per-client burst allowance")
+	flypyLocalCmd.Flags().IntVar(&flypyLocalFlags.execTimeoutSecs, "execution-timeout", 30, "Per-invocation execution timeout in seconds")
 }
 
 // flypyLocalRun implements the flypy local command
@@ -93,12 +114,29 @@ func flypyLocalRun(cmd *cobra.Command, args []string) {
 	}
 
 	// Create local runtime
-	runtime, err := flypy.NewLocalRuntime(&flypy.LocalRuntimeConfig{
-		ArtifactPath: artifactPath,
-		Host:         flypyLocalFlags.host,
-		Port:         flypyLocalFlags.port,
-		Verbose:      flypyFlags.verbose,
-	})
+	runtimeConfig := &flypy.LocalRuntimeConfig{
+		ArtifactPath:            artifactPath,
+		Host:                    flypyLocalFlags.host,
+		Port:                    flypyLocalFlags.port,
+		Verbose:                 flypyFlags.verbose,
+		AuthToken:               flypyLocalFlags.authToken,
+		VerifySignature:         flypyLocalFlags.verifySignature,
+		MaxConcurrentExecutions: flypyLocalFlags.maxConcurrent,
+		MaxRequestBytes:         flypyLocalFlags.maxBodyBytes,
+		PerIPRateLimit:          rate.Limit(flypyLocalFlags.rateLimit),
+		PerIPRateBurst:          flypyLocalFlags.rateBurst,
+		ExecutionTimeout:        time.Duration(flypyLocalFlags.execTimeoutSecs) * time.Second,
+	}
+	if flypyLocalFlags.verifySignature {
+		key, err := os.ReadFile(flypyLocalFlags.signaturePublicKey)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: read signature public key: %v\n", err)
+			os.Exit(1)
+		}
+		runtimeConfig.SignaturePublicKey = key
+	}
+
+	runtime, err := flypy.NewLocalRuntime(runtimeConfig)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to create local runtime: %v\n", err)
 		os.Exit(1)

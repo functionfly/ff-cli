@@ -26,6 +26,12 @@ type CodegenContext struct {
 	// hoistedVariableNames tracks variables that have been hoisted (parameters that are reassigned)
 	// These should NOT be prefixed with "input." because they have local mutable copies
 	hoistedVariableNames map[string]bool
+
+	// localTypes records the Rust type (e.g. "i32", "String", "f64") for
+	// local variables so the value generator can emit the right Rust type
+	// when the variable is referenced (the IR's reference kind leaves the
+	// type as unknown, which would otherwise force an unnecessary coercion).
+	localTypes map[string]string
 }
 
 // newCodegenContext creates a fresh CodegenContext for a compilation pass.
@@ -35,6 +41,7 @@ func newCodegenContext() *CodegenContext {
 		movedVariables:       make(map[string]string),
 		declaredVariables:    make(map[string]bool),
 		hoistedVariableNames: make(map[string]bool),
+		localTypes:           make(map[string]string),
 	}
 }
 
@@ -149,6 +156,13 @@ func (ctx *CodegenContext) generateOperationWithIndent(op ir.Operation, indent i
 	case "assign":
 		value := ctx.generateValue(op.Operands[0])
 
+		// Record the Rust type of the local variable so subsequent references
+		// (which the IR represents as IRTypeUnknown) can be emitted with the
+		// correct type. We always record the type, even for serde_json::Value,
+		// because dict/list literals and json!() calls are common Value
+		// sources and downstream arithmetic needs to coerce at the use site.
+		ctx.localTypes[op.Result] = GoTypeToRust(op.Type_)
+
 		// Check if this variable was already declared - if so, use reassignment
 		if ctx.declaredVariables[op.Result] {
 			// For reassignments from input.*, check if we should extract strings
@@ -226,7 +240,7 @@ func (ctx *CodegenContext) generateOperationWithIndent(op ir.Operation, indent i
 		if len(op.Operands) > 0 {
 			return fmt.Sprintf("%sreturn Output { result: %s };\n", indentStr, ctx.generateValue(op.Operands[0]))
 		}
-		return fmt.Sprintf("%sreturn Output { result: String::new() };\n", indentStr)
+		return fmt.Sprintf("%sreturn Output { result: serde_json::Value::Null };\n", indentStr)
 	case "expr":
 		// Expression statement (for side effects)
 		if op.Value != nil {

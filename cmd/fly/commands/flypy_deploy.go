@@ -12,7 +12,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,6 +22,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/functionfly/ff-cli/cmd/fly/telemetry"
 	"github.com/functionfly/ff-cli/internal/cli"
 	artifactPkg "github.com/functionfly/ff-cli/internal/flypy/artifact"
 )
@@ -65,6 +68,13 @@ func init() {
 // flypyDeployRun implements the flypy deploy command
 func flypyDeployRun(cmd *cobra.Command, args []string) {
 	artifactPath := flypyDeployFlags.artifact
+
+	cleanArtifactPath, err := cleanPath(artifactPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: invalid artifact path: %v\n", err)
+		os.Exit(1)
+	}
+	artifactPath = cleanArtifactPath
 
 	// Validate artifact directory exists
 	if _, err := os.Stat(artifactPath); os.IsNotExist(err) {
@@ -145,8 +155,10 @@ func flypyDeployRun(cmd *cobra.Command, args []string) {
 		token = creds.Token
 	}
 
+	telemetry.Emit(context.Background(), telemetry.Event{Kind: telemetry.EventDeployStart, Start: time.Now()})
 	deployResp, err := deployToRegistry(registryURL, deployReq, token)
 	if err != nil {
+		telemetry.Emit(context.Background(), telemetry.Event{Kind: telemetry.EventDeployEnd, Status: "error", Error: err.Error(), Start: time.Now()})
 		fmt.Fprintf(os.Stderr, "Error: deployment failed: %v\n", err)
 		os.Exit(1)
 	}
@@ -160,6 +172,7 @@ func flypyDeployRun(cmd *cobra.Command, args []string) {
 		fmt.Printf("   Message: %s\n", deployResp.Message)
 	}
 
+	telemetry.Emit(context.Background(), telemetry.Event{Kind: telemetry.EventDeployEnd, Status: "ok", Start: time.Now()})
 	fmt.Printf("\n")
 	fmt.Printf("Your function is now available at:\n")
 	fmt.Printf("  %s/functions/%s\n", registryURL, artifact.Manifest.Name)
@@ -331,20 +344,30 @@ func createDeploymentRequest(artifact *artifactPkg.Artifact, public bool, tags [
 	}, nil
 }
 
-// deployToRegistry sends the deployment request to the registry
+// deployToRegistry sends the deployment request to the registry.
 func deployToRegistry(registryURL string, req *cli.DeployRequest, token string) (*cli.DeployResponse, error) {
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: 30 * time.Second,
+	if u, err := url.Parse(registryURL); err != nil {
+		return nil, fmt.Errorf("invalid registry URL %q: %w", registryURL, err)
+	} else if u.Scheme != "https" && u.Scheme != "http" {
+		return nil, fmt.Errorf("registry URL must use http or https scheme: %s", registryURL)
+	} else if u.Host == "" {
+		return nil, fmt.Errorf("registry URL missing host: %s", registryURL)
 	}
 
-	// Marshal request
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 20,
+			IdleConnTimeout:    90 * time.Second,
+		},
+	}
+
 	reqData, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Create request
 	deployURL := strings.TrimSuffix(registryURL, "/") + "/api/v1/functions/deploy"
 	httpReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, deployURL, bytes.NewReader(reqData))
 	if err != nil {
@@ -353,36 +376,50 @@ func deployToRegistry(registryURL string, req *cli.DeployRequest, token string) 
 
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	// Add authentication header from stored credentials
 	if token != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	// Send request
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Read response
 	respData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// Check status
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("deployment failed with status %d: %s", resp.StatusCode, string(respData))
 	}
 
-	// Parse response
 	var deployResp cli.DeployResponse
 	if err := json.Unmarshal(respData, &deployResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &deployResp, nil
+}
+
+func parseRegistryURL(raw string) (*url.URL, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid registry URL %q: %w", raw, err)
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("registry URL missing host: %s", raw)
+	}
+	host, _, portErr := net.SplitHostPort(u.Host)
+	if portErr != nil && strings.Contains(portErr.Error(), "missing port") {
+		if u.Scheme == "https" {
+			u.Host = net.JoinHostPort(host, "443")
+		} else if u.Scheme == "http" {
+			u.Host = net.JoinHostPort(host, "80")
+		}
+	}
+	return u, nil
 }
 
 // base64Encode encodes data to base64

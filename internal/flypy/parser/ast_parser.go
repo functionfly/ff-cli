@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -22,6 +24,50 @@ type ModuleNode struct {
 	Body []interface{} `json:"body"`
 }
 
+// resolvedPython3 is the absolute path to the python3 binary. Resolved
+// once on first use and cached for the process lifetime. Caching the
+// absolute path means subsequent invocations don't repeat a PATH
+// lookup, which in turn prevents a malicious CWD or writable PATH
+// directory from substituting a different python3 binary between
+// invocations.
+var resolvedPython3 string
+
+// resolvePython3 returns the absolute path to the python3 binary. It
+// tries (in order): an absolute path override, the PATH lookup, and
+// a small set of well-known system locations.
+func resolvePython3() (string, error) {
+	if resolvedPython3 != "" {
+		return resolvedPython3, nil
+	}
+	candidates := []string{"python3"}
+	if v := os.Getenv("FLYPY_PYTHON3"); v != "" {
+		candidates = append([]string{v}, candidates...)
+	}
+	candidates = append(candidates,
+		"/usr/bin/python3",
+		"/usr/local/bin/python3",
+		"/opt/homebrew/bin/python3",
+	)
+	for _, c := range candidates {
+		if filepath.IsAbs(c) {
+			if info, err := os.Stat(c); err == nil && !info.IsDir() && info.Mode()&0o111 != 0 {
+				resolvedPython3 = c
+				return c, nil
+			}
+			continue
+		}
+		if p, err := exec.LookPath(c); err == nil {
+			if abs, err := filepath.Abs(p); err == nil {
+				resolvedPython3 = abs
+				return abs, nil
+			}
+			resolvedPython3 = p
+			return p, nil
+		}
+	}
+	return "", fmt.Errorf("python3 not found in PATH or well-known locations")
+}
+
 // ParsePython parses Python source code and returns an AST.
 // It uses Python's ast module via subprocess for reliable parsing.
 // Returns an error if the source exceeds MaxSourceSize bytes.
@@ -31,7 +77,12 @@ func ParsePython(ctx context.Context, source string) (*PythonAST, error) {
 		return nil, fmt.Errorf("source code too large: %d bytes (max %d bytes)", len(source), MaxSourceSize)
 	}
 
-	cmd := exec.CommandContext(ctx, "python3", "-c", `
+	pythonPath, err := resolvePython3()
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.CommandContext(ctx, pythonPath, "-c", `
 import ast
 import json
 import sys
@@ -62,10 +113,24 @@ print(json.dumps(encoder.default(tree)))
 `)
 
 	cmd.Stdin = strings.NewReader(source)
+	// Drop PATH from the child env. The child only needs stdlib (ast,
+	// json, sys), so this prevents an attacker who can write to a
+	// directory in PATH from substituting a malicious python3 helper.
+	safeEnv := make([]string, 0, len(os.Environ()))
+	for _, kv := range os.Environ() {
+		if strings.HasPrefix(kv, "PATH=") {
+			continue
+		}
+		safeEnv = append(safeEnv, kv)
+	}
+	cmd.Env = safeEnv
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("Python parse error: %s", string(exitErr.Stderr))
+			// Do not echo Python's stderr to the API caller: it
+			// can contain attacker-controlled source. Log it
+			// server-side instead.
+			return nil, fmt.Errorf("Python parse error (exit %d)", exitErr.ExitCode())
 		}
 		return nil, fmt.Errorf("failed to run Python parser: %w", err)
 	}
@@ -218,9 +283,7 @@ func GetCallKeywords(call map[string]interface{}) []KeywordArg {
 
 // GetBinOpInfo returns the operation, left and right of a binary operation
 func GetBinOpInfo(expr map[string]interface{}) (op string, left interface{}, right interface{}) {
-	if opVal, ok := expr["op"].(string); ok {
-		op = opVal
-	}
+	op = extractOpName(expr["op"])
 	if leftVal, ok := expr["left"]; ok {
 		left = leftVal
 	}
@@ -340,15 +403,7 @@ func GetCompareComparators(expr map[string]interface{}) []interface{} {
 
 // GetBoolOpOp returns boolean operation operator
 func GetBoolOpOp(expr map[string]interface{}) string {
-	if opVal, ok := expr["op"].(string); ok {
-		return opVal
-	}
-	if opMap, ok := expr["op"].(map[string]interface{}); ok {
-		if opType, ok := opMap["_type"].(string); ok {
-			return opType
-		}
-	}
-	return ""
+	return extractOpName(expr["op"])
 }
 
 // GetBoolOpValues returns boolean operation values
@@ -361,16 +416,21 @@ func GetBoolOpValues(expr map[string]interface{}) []interface{} {
 
 // GetUnaryOpOp returns unary operation operator
 func GetUnaryOpOp(expr map[string]interface{}) string {
-	if opVal, ok := expr["op"].(string); ok {
-		return opVal
+	return extractOpName(expr["op"])
+}
+
+// extractOpName returns the operator name from an AST op field, which can
+// be either a bare string (e.g. "Add") or a sub-map with __node_type__ / _type.
+func extractOpName(raw interface{}) string {
+	if s, ok := raw.(string); ok {
+		return s
 	}
-	if opMap, ok := expr["op"].(map[string]interface{}); ok {
-		// Check for __node_type__ first (primary format from Python AST encoder)
-		if opType, ok := opMap["__node_type__"].(string); ok {
-			return opType
+	if m, ok := raw.(map[string]interface{}); ok {
+		if t, ok := m["__node_type__"].(string); ok {
+			return t
 		}
-		if opType, ok := opMap["_type"].(string); ok {
-			return opType
+		if t, ok := m["_type"].(string); ok {
+			return t
 		}
 	}
 	return ""
@@ -808,15 +868,7 @@ func GetAugAssignTarget(stmt map[string]interface{}) interface{} {
 
 // GetAugAssignOp returns the operator of an augmented assignment
 func GetAugAssignOp(stmt map[string]interface{}) string {
-	if op, ok := stmt["op"].(string); ok {
-		return op
-	}
-	if opMap, ok := stmt["op"].(map[string]interface{}); ok {
-		if opType, ok := opMap["_type"].(string); ok {
-			return opType
-		}
-	}
-	return ""
+	return extractOpName(stmt["op"])
 }
 
 // GetAugAssignValue returns the value of an augmented assignment

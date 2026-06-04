@@ -47,7 +47,7 @@ wasm32-wasi WebAssembly runtime for FunctionFly.`,
 	cmd.Flags().BoolVar(&compileRustRelease, "release", true, "Build in release mode with optimizations")
 	cmd.Flags().BoolVarP(&compileRustVerbose, "verbose", "v", false, "Verbose output")
 
-	cmd.MarkFlagRequired("input")
+	_ = cmd.MarkFlagRequired("input")
 
 	return cmd
 }
@@ -71,7 +71,7 @@ func runCompileRust(cmd *cobra.Command) error {
 	}
 
 	// Create output directory
-	if err := os.MkdirAll(compileRustOutput, 0755); err != nil {
+	if err := os.MkdirAll(compileRustOutput, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -80,10 +80,18 @@ func runCompileRust(cmd *cobra.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
-
 	absOutput, err := filepath.Abs(compileRustOutput)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	absProjectDir, err = safeWritePath(absProjectDir)
+	if err != nil {
+		return err
+	}
+	absOutput, err = safeWritePath(absOutput)
+	if err != nil {
+		return err
 	}
 
 	// Print status
@@ -174,9 +182,13 @@ func checkWasiTarget() error {
 
 // copyFile copies a file from src to dst
 func copyFile(src, dst string) error {
-	data, err := os.ReadFile(src)
+	cleanSrc, err := safeReadPath(src)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, data, 0644)
+	data, err := os.ReadFile(cleanSrc)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0600)
 }

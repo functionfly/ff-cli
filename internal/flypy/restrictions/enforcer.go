@@ -208,7 +208,7 @@ func GetAllowedModules(mode ExecutionMode) map[string]bool {
 	case ModeComplex:
 		return ComplexModules
 	case ModeCompatible:
-		return CompatibleSandboxedModules
+		return nil
 	default:
 		return DeterministicModules
 	}
@@ -471,14 +471,6 @@ func isImport(stmt map[string]interface{}) bool {
 
 func checkImportWithMode(stmt map[string]interface{}, errors *[]CompileError, allowedModules map[string]bool, mode ExecutionMode) {
 	nodeType := parser.GetNodeType(stmt)
-
-	// CompatibleMode uses a sandboxed whitelist to prevent file, network,
-	// shell, and environment access while still allowing broader stdlib.
-	if mode == ModeCompatible {
-		if allowedModules == nil {
-			allowedModules = CompatibleSandboxedModules
-		}
-	}
 
 	if nodeType == "Import" {
 		// Check Import statements: from stmt.names, check each alias.name

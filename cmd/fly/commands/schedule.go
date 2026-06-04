@@ -133,11 +133,11 @@ func newScheduleTriggerCmd() *cobra.Command {
 }
 
 func runScheduleSet(cronExpr, preset, timezone string, runOnDeploy bool) error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -246,11 +246,11 @@ func runScheduleList(asJSON bool) error {
 }
 
 func runScheduleGet(asJSON bool) error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -306,11 +306,11 @@ func runScheduleGet(asJSON bool) error {
 }
 
 func runScheduleRemove() error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}
@@ -377,11 +377,11 @@ func runSchedulePresets(asJSON bool) error {
 }
 
 func runScheduleTrigger() error {
-	manifest, err := LoadManifest("")
+	creds, err := requireAuth()
 	if err != nil {
 		return err
 	}
-	creds, err := LoadCredentials()
+	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
 	}

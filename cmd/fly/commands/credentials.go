@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -48,6 +49,17 @@ func credentialsPath() (string, error) {
 	return filepath.Join(home, ".ff", "credentials.json"), nil
 }
 
+// requireAuth is a convenience wrapper that returns a CLIError-tagged
+// "not logged in" error so callers can short-circuit before doing any
+// manifest, network, or filesystem work. It directs the user to `ff login`.
+func requireAuth() (*Credentials, error) {
+	creds, err := LoadCredentials()
+	if err != nil {
+		return nil, NewCLIError(err, ExitCodeAuthError, "not logged in\n   → Run: ff login")
+	}
+	return creds, nil
+}
+
 // LoadCredentials reads credentials from the OS keychain, falling back to the file on disk.
 func LoadCredentials() (*Credentials, error) {
 	// Try OS keychain first
@@ -66,16 +78,45 @@ func LoadCredentials() (*Credentials, error) {
 	return loadCredentialsFromFile()
 }
 
-// loadCredentialsFromFile reads credentials from disk (legacy fallback).
+// loadCredentialsFromFile reads credentials from disk.
+// Tries the canonical path first (~/.ff/credentials.json), then falls back to
+// the legacy path (~/.functionfly/credentials.json) used by earlier CLI
+// versions. Migrates the legacy file to the canonical path on first read so
+// subsequent lookups are fast.
 func loadCredentialsFromFile() (*Credentials, error) {
-	path, err := credentialsPath()
-	if err != nil {
+	creds, err := loadFromPath(canonicalCredentialsPath())
+	if err == nil {
+		return creds, nil
+	}
+	if !errors.Is(err, errCredentialsMissing) {
 		return nil, err
 	}
+	creds, legacyErr := loadFromPath(legacyCredentialsPath())
+	if legacyErr != nil {
+		// Neither path had credentials — preserve the user-friendly
+		// "not logged in" wording for callers (and `ff whoami`).
+		return nil, fmt.Errorf("not logged in\n   → Run: ff login")
+	}
+	// Atomically copy the legacy file into the canonical path, then
+	// remove the legacy file. If the rename fails, leave both files
+	// in place rather than losing the user's credentials.
+	if err := copyFileAtomic(legacyCredentialsPath(), canonicalCredentialsPath(), 0o600); err == nil {
+		if rmErr := os.Remove(legacyCredentialsPath()); rmErr == nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Migrated credentials from ~/.functionfly/credentials.json → ~/.ff/credentials.json\n")
+		}
+	}
+	return creds, nil
+}
+
+// errCredentialsMissing is the sentinel returned when a credentials file does not exist.
+var errCredentialsMissing = fmt.Errorf("credentials file missing")
+
+// loadFromPath reads, decodes, and validates a credentials file at the given path.
+func loadFromPath(path string) (*Credentials, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("not logged in\n   → Run: ff login")
+			return nil, errCredentialsMissing
 		}
 		return nil, fmt.Errorf("could not read credentials: %w", err)
 	}
@@ -87,6 +128,22 @@ func loadCredentialsFromFile() (*Credentials, error) {
 		return nil, fmt.Errorf("your session has expired\n   → Run: ff login")
 	}
 	return &creds, nil
+}
+
+func canonicalCredentialsPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".ff", "credentials.json")
+}
+
+func legacyCredentialsPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".functionfly", "credentials.json")
 }
 
 // SaveCredentials writes credentials to the OS keychain, with a file-based fallback.
@@ -117,14 +174,11 @@ func saveCredentialsToFile(creds *Credentials) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return fmt.Errorf("could not create credentials directory: %w", err)
-	}
 	data, err := json.MarshalIndent(creds, "", "  ")
 	if err != nil {
 		return fmt.Errorf("could not serialize credentials: %w", err)
 	}
-	return os.WriteFile(path, data, 0600)
+	return writeFileAtomic(path, data, 0o600)
 }
 
 // DeleteCredentials removes credentials from both the OS keychain and disk.
@@ -232,6 +286,8 @@ func SessionExpiresIn() string {
 
 // resolveAuthorName returns (author, name) either from an optional positional
 // "author/name" argument or by reading functionfly.jsonc + stored credentials.
+// When the manifest must be loaded, auth is checked first so the user gets
+// the correct next-step hint (`ff login` vs `ff init`).
 func resolveAuthorName(args []string) (author, name string, err error) {
 	if len(args) > 0 {
 		parts := splitAuthorName(args[0])
@@ -240,13 +296,13 @@ func resolveAuthorName(args []string) (author, name string, err error) {
 		}
 		return parts[0], parts[1], nil
 	}
+	creds, cerr := requireAuth()
+	if cerr != nil {
+		return "", "", cerr
+	}
 	manifest, merr := LoadManifest("")
 	if merr != nil {
 		return "", "", fmt.Errorf("no functionfly.jsonc found — run 'ff init' or pass author/name as argument")
-	}
-	creds, cerr := LoadCredentials()
-	if cerr != nil {
-		return "", "", fmt.Errorf("not logged in — run 'ff login'")
 	}
 	return creds.User.Username, manifest.Name, nil
 }

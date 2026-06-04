@@ -249,7 +249,7 @@ func CreateEmbeddedPythonWasm(sourceCode string, manifest *manifest.Manifest) ([
 	// Write WAT to temporary file for compilation
 	tempDir := os.TempDir()
 	watFile := filepath.Join(tempDir, fmt.Sprintf("embedded-python-%d.wat", os.Getpid()))
-	if err := os.WriteFile(watFile, []byte(watContent), 0644); err != nil {
+	if err := os.WriteFile(watFile, []byte(watContent), 0600); err != nil {
 		return nil, fmt.Errorf("failed to write WAT file: %v", err)
 	}
 	defer os.Remove(watFile)

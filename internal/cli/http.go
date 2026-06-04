@@ -5,35 +5,84 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
-// Client represents an HTTP client for the FunctionFly API
-type Client struct {
-	baseURL string
-	token   string
-	client  *http.Client
+const clientDefaultTimeout = 30 * time.Second
+
+var defaultHTTPClient = &http.Client{
+	Timeout: clientDefaultTimeout,
+	Transport: &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 20,
+		IdleConnTimeout:    90 * time.Second,
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout: 10 * time.Second,
+	},
 }
 
-// NewClient creates a new API client
-func NewClient(baseURL, token string) *Client {
-	return &Client{
+// Client represents an HTTP client for the FunctionFly API.
+type Client struct {
+	baseURL        string
+	token          string
+	client         *http.Client
+	allowInsecure  bool
+	debugRequestFn func(string)
+}
+
+type clientOption func(*Client)
+
+// NewClient creates a new API client.
+func NewClient(baseURL, token string, opts ...clientOption) *Client {
+	c := &Client{
 		baseURL: baseURL,
 		token:   token,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		client:  defaultHTTPClient,
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+// WithInsecureTLS returns an option that relaxes TLS verification for a
+// specific client. It exists only for local dev/test against a localhost
+// API with a self-signed certificate. Production callers should not set
+// this.
+func WithInsecureTLS() clientOption {
+	return func(c *Client) {
+		c.allowInsecure = true
+		c.client = &http.Client{Timeout: clientDefaultTimeout}
+		c.client.Transport = insecureTransport()
 	}
 }
 
-// SetToken updates the authentication token
-func (c *Client) SetToken(token string) {
-	c.token = token
+// WithDebugRequestHook attaches a hook that receives a redacted request
+// preview before the request is sent. The hook is invoked synchronously
+// and may be called from any goroutine.
+func WithDebugRequestHook(fn func(preview string)) clientOption {
+	return func(c *Client) {
+		c.debugRequestFn = fn
+	}
 }
 
-// doRequest performs an HTTP request with authentication
+func (c *Client) logDebugRequest(req *http.Request) {
+	if c.debugRequestFn == nil {
+		return
+	}
+	body := redactableBody(req)
+	c.debugRequestFn(fmt.Sprintf("%s %s %s | Authorization: %s | Body: %s",
+		req.Method, req.URL, req.Proto, redactBearer(c.token), truncatePreview(body)))
+}
+
+// doRequest performs an HTTP request with authentication.
 func (c *Client) doRequest(method, path string, body interface{}) (*http.Response, error) {
 	var reqBody io.Reader
 	if body != nil {
@@ -44,25 +93,91 @@ func (c *Client) doRequest(method, path string, body interface{}) (*http.Respons
 		reqBody = bytes.NewBuffer(jsonData)
 	}
 
-	url := c.baseURL + path
-	req, err := http.NewRequest(method, url, reqBody)
+	fullURL, err := joinURIRoot(c.baseURL, path)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(method, fullURL, reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/json")
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 
-	// Perform request
+	c.logDebugRequest(req)
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
 	return resp, nil
+}
+
+// joinURIRoot ensures path values are not treated as opaque strings when
+// the base URL contains a path component. It also rejects control
+// characters that could be used for request smuggling.
+func joinURIRoot(base, path string) (string, error) {
+	if base == "" {
+		return "", fmt.Errorf("base URL is empty")
+	}
+	if path == "" {
+		return base, nil
+	}
+	if strings.ContainsAny(path, "\r\n") {
+		return "", fmt.Errorf("invalid request path: control characters are not allowed")
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	return base + path, nil
+}
+
+func redactBearer(token string) string {
+	if token == "" {
+		return "(none)"
+	}
+	if len(token) <= 8 {
+		return "REDACTED"
+	}
+	return token[:4] + "****" + token[len(token)-4:]
+}
+
+func redactableBody(req *http.Request) string {
+	if req.Body == nil {
+		return ""
+	}
+	data, _ := io.ReadAll(req.Body)
+	req.Body = io.NopCloser(bytes.NewReader(data))
+	return string(data)
+}
+
+func truncatePreview(s string) string {
+	const limit = 200
+	if len(s) <= limit {
+		return s
+	}
+	return s[:limit] + "..."
+}
+
+func insecureTransport() *http.Transport {
+	return &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 20,
+		IdleConnTimeout:    90 * time.Second,
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+}
+
+func init() {
+	_ = strings.ContainsAny
 }
 
 // Login performs authentication and returns a JWT token

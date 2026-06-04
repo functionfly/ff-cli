@@ -103,14 +103,11 @@ func SaveConfig(cfg *GlobalConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return fmt.Errorf("could not create config directory: %w", err)
-	}
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("could not serialize config: %w", err)
 	}
-	return os.WriteFile(path, data, 0600)
+	return writeFileAtomic(path, data, 0o600)
 }
 
 type Manifest struct {
@@ -167,7 +164,7 @@ func SaveManifest(dir string, m *Manifest) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, "functionfly.jsonc"), data, 0644)
+	return os.WriteFile(filepath.Join(dir, "functionfly.jsonc"), data, 0600)
 }
 
 func stripJSONCComments(data []byte) []byte {

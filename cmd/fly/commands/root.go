@@ -107,10 +107,15 @@ This displays the semantic version, git commit hash, and build date.
 Use this to verify which version of ff you have installed.`,
 		Example: `  ff version
   ff version --short  # Show only version number
-  ff version --json   # Output as JSON`,
+  ff version --json   # Output as JSON
+  ff --format json version  # Honors global --format`,
 		Run: func(cmd *cobra.Command, args []string) {
 			short, _ := cmd.Flags().GetBool("short")
 			asJSON, _ := cmd.Flags().GetBool("json")
+			// Honor the global --format flag too: `ff --format json version` should print JSON.
+			if !asJSON {
+				asJSON = WantJSON()
+			}
 			if short {
 				fmt.Println(version.Short())
 			} else if asJSON {
@@ -124,7 +129,6 @@ Use this to verify which version of ff you have installed.`,
 			}
 		},
 	}
-
 	cmd.Flags().Bool("short", false, "Show only version number")
 	cmd.Flags().Bool("json", false, "Output as JSON")
 

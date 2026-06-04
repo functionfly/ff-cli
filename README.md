@@ -8,7 +8,7 @@
 
 **macOS / Linux (one-liner)**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.sh | bash
 ```
 
 **Homebrew**
@@ -19,10 +19,10 @@ brew install ff
 
 **Windows (PowerShell)**
 ```powershell
-iwr -useb https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.ps1 | iex
 ```
 
-**Download directly** — see [Releases](https://github.com/functionfly/ff-cli/releases)
+**Download directly** — see [Releases](https://github.com/functionfly/fly/releases)
 
 ---
 
@@ -166,9 +166,9 @@ The function manifest uses JSONC format (JSON with comments):
 **Requirements:** Go ≥ 1.24
 
 ```bash
-# Clone
-git clone https://github.com/functionfly/ff-cli.git
-cd ff-cli
+# Clone`
+git clone https://github.com/functionfly/ff-cli`.git
+cd fly
 
 # Build
 go build -o ff ./cmd/ff
@@ -192,7 +192,7 @@ golangci-lint run
 ### Project structure
 
 ```
-cmd/ff/            # CLI entry point and commands
+cmd/fly/           # CLI entry point and commands
 internal/
 ├── bundler/       # TypeScript/JS/Python/WASM bundling
 ├── cli/           # HTTP client and config
@@ -210,8 +210,8 @@ scripts/           # Install scripts (bash, PowerShell)
 Tags trigger the GoReleaser workflow automatically:
 
 ```bash
-git tag v1.2.3
-git push origin v1.2.3
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 GoReleaser produces:

@@ -46,8 +46,8 @@ Supported providers: vercel, cloudflare, deno, fly`,
 	cmd.Flags().StringVar(&backendURL, "url", "", "Backend URL (required for custom provider)")
 	cmd.Flags().StringVar(&backendSecret, "secret", "", "Shared secret for backend authentication")
 
-	cmd.MarkFlagRequired("app")
-	cmd.MarkFlagRequired("provider")
+	_ = cmd.MarkFlagRequired("app")
+	_ = cmd.MarkFlagRequired("provider")
 
 	return cmd
 }

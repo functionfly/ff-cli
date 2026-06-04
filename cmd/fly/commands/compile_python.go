@@ -4,12 +4,15 @@ Copyright © 2026 FunctionFly
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/functionfly/ff-cli/internal/flypy"
 )
 
 var (
@@ -26,8 +29,8 @@ func newCompilePythonCmd() *cobra.Command {
 		Short: "Compile Python function to WebAssembly",
 		Long: `Compile a Python function to WebAssembly (WASM).
 
-This command uses the FlyPy compiler to transform Python functions
-into deterministic WebAssembly modules that execute in the
+This command uses the FlyPy compiler (in-process) to transform Python
+functions into deterministic WebAssembly modules that execute in the
 FunctionFly runtime without requiring a Python interpreter.`,
 		Example: `  # Compile a Python function
   ff compile python --input handler.py --output ./dist
@@ -41,6 +44,7 @@ FunctionFly runtime without requiring a Python interpreter.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCompilePython(cmd)
 		},
+		SilenceUsage: true,
 	}
 
 	cmd.Flags().StringVarP(&compileInput, "input", "i", "", "Input Python file (required)")
@@ -48,18 +52,19 @@ FunctionFly runtime without requiring a Python interpreter.`,
 	cmd.Flags().StringVar(&compileMode, "mode", "deterministic", "Compilation mode: deterministic, complex, compatible")
 	cmd.Flags().BoolVarP(&compileVerbose, "verbose", "v", false, "Verbose output")
 
-	cmd.MarkFlagRequired("input")
+	_ = cmd.MarkFlagRequired("input")
 
 	return cmd
 }
 
 func runCompilePython(cmd *cobra.Command) error {
-	// Validate input file exists
-	if _, err := os.Stat(compileInput); os.IsNotExist(err) {
-		return fmt.Errorf("input file not found: %s", compileInput)
+	if _, err := os.Stat(compileInput); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("input file not found: %s", compileInput)
+		}
+		return fmt.Errorf("could not stat %s: %w", compileInput, err)
 	}
 
-	// Validate mode
 	validModes := map[string]bool{
 		"deterministic": true,
 		"complex":       true,
@@ -69,75 +74,61 @@ func runCompilePython(cmd *cobra.Command) error {
 		return fmt.Errorf("invalid mode: %s. Valid modes: deterministic, complex, compatible", compileMode)
 	}
 
-	// Try to find flypy-go binary in common locations
-	flypyGoPaths := []string{
-		"./cmd/flypy-go/flypy-go",
-		"flypy-go",
-	}
-
-	var flypyGoPath string
-	for _, p := range flypyGoPaths {
-		if _, err := os.Stat(p); err == nil {
-			flypyGoPath = p
-			break
-		}
-	}
-
-	// If not found, try using go run
-	if flypyGoPath == "" {
-		flypyGoPath = "go"
-	}
-
-	// Build arguments
-	args := []string{}
-	if flypyGoPath == "go" {
-		args = append(args, "run", "./cmd/flypy-go")
-	}
-	args = append(args, "compile")
-
-	// Add flags
-	args = append(args, "--input", compileInput)
-	args = append(args, "--output", compileOutput)
-	args = append(args, "--mode", compileMode)
-	if compileVerbose {
-		args = append(args, "--verbose")
-	}
-
-	// Get absolute paths for input/output
 	absInput, err := filepath.Abs(compileInput)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+	absInput, err = safeWritePath(absInput)
+	if err != nil {
+		return err
 	}
 
 	absOutput, err := filepath.Abs(compileOutput)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
+	absOutput, err = safeWritePath(absOutput)
+	if err != nil {
+		return err
+	}
 
-	// Print status
-	fmt.Printf("Compiling Python function: %s\n", absInput)
-	fmt.Printf("Output directory: %s\n", absOutput)
-	fmt.Printf("Mode: %s\n", compileMode)
-	fmt.Println()
+	source, err := os.ReadFile(absInput)
+	if err != nil {
+		return fmt.Errorf("failed to read %s: %w", absInput, err)
+	}
 
-	// Execute flypy-go
-	execCmd := exec.Command(flypyGoPath, args...)
-	execCmd.Stdout = os.Stdout
-	execCmd.Stderr = os.Stderr
-	execCmd.Dir = getProjectRoot()
+	functionName := strings.TrimSuffix(filepath.Base(absInput), filepath.Ext(absInput))
 
-	if err := execCmd.Run(); err != nil {
+	if !WantJSON() {
+		fmt.Printf("Compiling Python function: %s\n", absInput)
+		fmt.Printf("Output directory: %s\n", absOutput)
+		fmt.Printf("Mode: %s\n", compileMode)
+		fmt.Println()
+	}
+
+	mode := flypy.ExecutionMode(compileMode)
+	compiler := flypy.NewCompiler(&flypy.Config{
+		Mode:      mode,
+		OutputDir: absOutput,
+		Verbose:   compileVerbose,
+	})
+
+	result, err := compiler.Compile(context.Background(), string(source), functionName)
+	if err != nil {
 		return fmt.Errorf("compilation failed: %w", err)
 	}
 
-	fmt.Println()
-	fmt.Printf("✅ Compilation successful! Output written to: %s\n", absOutput)
+	if len(result.Warnings) > 0 {
+		fmt.Println("⚠️  Compilation warnings:")
+		for _, w := range result.Warnings {
+			fmt.Printf("   - %s\n", w)
+		}
+		fmt.Println()
+	}
 
+	if !WantJSON() {
+		fmt.Println()
+		fmt.Printf("✅ Compilation successful! Output written to: %s\n", absOutput)
+	}
 	return nil
-}
-
-func getProjectRoot() string {
-	// Get the directory where the fly binary is run from
-	cwd, _ := os.Getwd()
-	return cwd
 }

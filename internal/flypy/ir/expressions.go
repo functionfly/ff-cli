@@ -36,6 +36,21 @@ func convertExpression(expr map[string]interface{}) (Value, IRType, error) {
 			return Value{}, IRTypeUnknown, err
 		}
 
+		// If either operand's type is unknown (e.g. a dict access returns
+		// serde_json::Value), the result type is also unknown. This forces
+		// the code generator to coerce at the arithmetic site.
+		if leftType.Base == "unknown" || rightType.Base == "unknown" {
+			return Value{
+				Type: IRTypeUnknown,
+				Kind: BinOp,
+				Value: map[string]interface{}{
+					"op":    op,
+					"left":  leftVal,
+					"right": rightVal,
+				},
+			}, IRTypeUnknown, nil
+		}
+
 		resultType := IRTypeInt
 		if leftType.Base == "float" || rightType.Base == "float" {
 			resultType = IRTypeFloat

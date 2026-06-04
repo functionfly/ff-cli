@@ -231,7 +231,7 @@ func compileWithJavy(jsSource string, manifest *manifest.Manifest) ([]byte, erro
 	defer os.Remove(wasmFile)
 
 	// Write JavaScript to temp file
-	if err := os.WriteFile(jsFile, []byte(jsSource), 0644); err != nil {
+	if err := os.WriteFile(jsFile, []byte(jsSource), 0600); err != nil {
 		return nil, NewBundlerErrorWithCause("typescript-wasm compile", "failed to write temp JS file", err)
 	}
 
@@ -740,7 +740,7 @@ func CompileTypeScript(source string, config *TypeScriptWASMCompilerConfig) (*Co
 
 	// Write source to temp file
 	entryFile := filepath.Join(tempDir, "main.ts")
-	if err := os.WriteFile(entryFile, []byte(source), 0644); err != nil {
+	if err := os.WriteFile(entryFile, []byte(source), 0600); err != nil {
 		return nil, fmt.Errorf("failed to write source file: %w", err)
 	}
 
@@ -805,7 +805,7 @@ func CompileWithDeps(source string, deps map[string]string) (*CompiledWASM, erro
 	defer os.RemoveAll(tempDir)
 
 	entryFile := filepath.Join(tempDir, "main.ts")
-	if err := os.WriteFile(entryFile, []byte(source), 0644); err != nil {
+	if err := os.WriteFile(entryFile, []byte(source), 0600); err != nil {
 		return nil, fmt.Errorf("failed to write source: %w", err)
 	}
 
@@ -875,7 +875,7 @@ func resolveAndInstallDeps(ctx context.Context, workDir string, deps map[string]
 	if err != nil {
 		return nil, NewBundlerErrorWithCause("npm install", "failed to build package.json", err)
 	}
-	if err := os.WriteFile(filepath.Join(workDir, "package.json"), pkgBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(workDir, "package.json"), pkgBytes, 0600); err != nil {
 		return nil, NewBundlerErrorWithCause("npm install", "failed to write package.json", err)
 	}
 	cmd := exec.Command("npm", "install", "--production", "--no-audit", "--no-fund")

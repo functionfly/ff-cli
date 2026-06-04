@@ -76,6 +76,9 @@ func newCanaryStartCmd() *cobra.Command {
 			if percent <= 0 || percent >= 100 {
 				return fmt.Errorf("--percent must be between 1 and 99")
 			}
+			if _, err := requireAuth(); err != nil {
+				return err
+			}
 			author, name, err := resolveAuthorName(args)
 			if err != nil {
 				return err

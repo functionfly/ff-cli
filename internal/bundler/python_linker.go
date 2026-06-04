@@ -286,7 +286,7 @@ func CreateLinkerStub() ([]byte, error) {
 	defer os.Remove(wasmFile)
 
 	// Write WAT file
-	if err := os.WriteFile(watFile, []byte(watContent), 0644); err != nil {
+	if err := os.WriteFile(watFile, []byte(watContent), 0600); err != nil {
 		return nil, fmt.Errorf("failed to write WAT file: %v", err)
 	}
 
@@ -346,7 +346,7 @@ func writeTempWasm(prefix string, generator func() ([]byte, error)) ([]byte, str
 
 	tempDir := os.TempDir()
 	path := filepath.Join(tempDir, fmt.Sprintf("%s-%d.wasm", prefix, os.Getpid()))
-	if err := os.WriteFile(path, wasmBytes, 0644); err != nil {
+	if err := os.WriteFile(path, wasmBytes, 0600); err != nil {
 		return nil, ""
 	}
 

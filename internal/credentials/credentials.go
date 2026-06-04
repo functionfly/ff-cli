@@ -37,7 +37,7 @@ func credentialsPath() string {
 func ensureConfigDir() error {
 	homeDir, _ := os.UserHomeDir()
 	configDir := filepath.Join(homeDir, ".ff")
-	return os.MkdirAll(configDir, 0755)
+	return os.MkdirAll(configDir, 0750)
 }
 
 // Save stores credentials to the filesystem

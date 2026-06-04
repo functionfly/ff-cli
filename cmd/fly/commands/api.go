@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -31,29 +32,92 @@ func NewAPIClient() (*APIClient, error) {
 		token = creds.Token
 	}
 	baseURL := "https://api.functionfly.com"
-	if url := os.Getenv("FF_API_URL"); url != "" {
-		baseURL = url
+	if u := os.Getenv("FF_API_URL"); u != "" {
+		baseURL = u
 	} else if cfg, _ := LoadConfig(); cfg != nil && cfg.API.URL != "" {
 		baseURL = cfg.API.URL
 	}
-	return &APIClient{BaseURL: baseURL, Token: token, client: &http.Client{Timeout: 30 * time.Second}}, nil
+	c := &APIClient{
+		BaseURL: baseURL,
+		Token:   token,
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 20,
+				IdleConnTimeout:    90 * time.Second,
+				TLSHandshakeTimeout: 10 * time.Second,
+			},
+		},
+	}
+	if err := c.sanitizeBaseURL(); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 // NewAPIClientWithToken creates a new API client with an explicit token.
 func NewAPIClientWithToken(token string) *APIClient {
-	if url := os.Getenv("FF_API_URL"); url != "" {
-		return &APIClient{BaseURL: url, Token: token, client: &http.Client{Timeout: 30 * time.Second}}
-	}
-	cfg, _ := LoadConfig()
 	baseURL := "https://api.functionfly.com"
-	if cfg != nil && cfg.API.URL != "" {
+	if u := os.Getenv("FF_API_URL"); u != "" {
+		baseURL = u
+	} else if cfg, _ := LoadConfig(); cfg != nil && cfg.API.URL != "" {
 		baseURL = cfg.API.URL
 	}
-	return &APIClient{BaseURL: baseURL, Token: token, client: &http.Client{Timeout: 30 * time.Second}}
+	c := &APIClient{
+		BaseURL: baseURL,
+		Token:   token,
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 20,
+				IdleConnTimeout:    90 * time.Second,
+				TLSHandshakeTimeout: 10 * time.Second,
+			},
+		},
+	}
+	_ = c.sanitizeBaseURL()
+	return c
+}
+
+func (c *APIClient) sanitizeBaseURL() error {
+	u, err := url.Parse(c.BaseURL)
+	if err != nil {
+		return fmt.Errorf("invalid API base URL %q: %w", c.BaseURL, err)
+	}
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return fmt.Errorf("API base URL must use http or https: %s", c.BaseURL)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("API base URL missing host: %s", c.BaseURL)
+	}
+	c.BaseURL = strings.TrimRight(u.String(), "/")
+	return nil
+}
+
+func (c *APIClient) joinPath(path string) (string, error) {
+	if c.BaseURL == "" {
+		return "", fmt.Errorf("API base URL is empty")
+	}
+	if path == "" {
+		return "", fmt.Errorf("request path is empty")
+	}
+	if strings.ContainsAny(path, "\r\n") {
+		return "", fmt.Errorf("invalid request path: control characters are not allowed")
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	return c.BaseURL + path, nil
 }
 
 func (c *APIClient) Get(path string, out interface{}) error {
-	req, err := http.NewRequest("GET", c.BaseURL+path, nil)
+	fullURL, err := c.joinPath(path)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("GET", fullURL, nil)
 	if err != nil {
 		return err
 	}
@@ -65,7 +129,11 @@ func (c *APIClient) Post(path string, body interface{}, out interface{}) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", c.BaseURL+path, bytes.NewReader(data))
+	fullURL, err := c.joinPath(path)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", fullURL, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
@@ -78,7 +146,11 @@ func (c *APIClient) Put(path string, body interface{}, out interface{}) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("PUT", c.BaseURL+path, bytes.NewReader(data))
+	fullURL, err := c.joinPath(path)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("PUT", fullURL, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
@@ -91,7 +163,11 @@ func (c *APIClient) Patch(path string, body interface{}, out interface{}) error 
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("PATCH", c.BaseURL+path, bytes.NewReader(data))
+	fullURL, err := c.joinPath(path)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("PATCH", fullURL, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
@@ -100,7 +176,11 @@ func (c *APIClient) Patch(path string, body interface{}, out interface{}) error 
 }
 
 func (c *APIClient) Delete(path string, out interface{}) error {
-	req, err := http.NewRequest("DELETE", c.BaseURL+path, nil)
+	fullURL, err := c.joinPath(path)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("DELETE", fullURL, nil)
 	if err != nil {
 		return err
 	}
@@ -119,7 +199,7 @@ func (c *APIClient) do(req *http.Request, out interface{}) error {
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
-			delay := time.Duration(1<<uint(attempt-1)) * 500 * time.Millisecond
+			delay := time.Duration(attempt) * 500 * time.Millisecond
 			time.Sleep(delay)
 		}
 
@@ -130,7 +210,7 @@ func (c *APIClient) do(req *http.Request, out interface{}) error {
 		}
 
 		body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			lastErr = fmt.Errorf("could not read response: %w", err)
 			continue
@@ -286,7 +366,11 @@ func (c *APIClient) DeleteBackend(appID, backendID string) error {
 
 // StreamLines opens a streaming GET connection and calls fn for each line.
 func (c *APIClient) StreamLines(path string, fn func(line string) bool) error {
-	req, err := http.NewRequest("GET", c.BaseURL+path, nil)
+	fullURL, err := c.joinPath(path)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("GET", fullURL, nil)
 	if err != nil {
 		return err
 	}
