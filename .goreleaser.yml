@@ -9,7 +9,7 @@ before:
 
 builds:
     - id: ff
-      main: ./cmd/ff
+      main: ./cmd/fly
       binary: ff
       goos:
           - linux
