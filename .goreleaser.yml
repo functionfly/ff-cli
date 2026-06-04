@@ -67,7 +67,7 @@ homebrew:
       license: Apache-2.0
       targets:
           - default
-      skip_upload: auto
+      skip_upload: true
       install: |
           bin.install "ff"
 
