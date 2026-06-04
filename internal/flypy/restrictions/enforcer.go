@@ -197,7 +197,10 @@ var ForbiddenIOOperations = map[string]bool{
 	"BufferedRandom": true,
 }
 
-// GetAllowedModules returns the allowed modules for a given execution mode
+// GetAllowedModules returns the allowed modules for a given execution mode.
+// CompatibleMode uses a sandboxed whitelist that excludes file I/O, network,
+// shell execution, and environment access to maintain a safe compatibility
+// baseline.
 func GetAllowedModules(mode ExecutionMode) map[string]bool {
 	switch mode {
 	case ModeDeterministic:
@@ -205,8 +208,7 @@ func GetAllowedModules(mode ExecutionMode) map[string]bool {
 	case ModeComplex:
 		return ComplexModules
 	case ModeCompatible:
-		// In compatible mode, allow all modules (will use MicroPython fallback)
-		return nil // nil means no restrictions
+		return CompatibleSandboxedModules
 	default:
 		return DeterministicModules
 	}
@@ -470,9 +472,12 @@ func isImport(stmt map[string]interface{}) bool {
 func checkImportWithMode(stmt map[string]interface{}, errors *[]CompileError, allowedModules map[string]bool, mode ExecutionMode) {
 	nodeType := parser.GetNodeType(stmt)
 
-	// In compatible mode, all imports are allowed
+	// CompatibleMode uses a sandboxed whitelist to prevent file, network,
+	// shell, and environment access while still allowing broader stdlib.
 	if mode == ModeCompatible {
-		return
+		if allowedModules == nil {
+			allowedModules = CompatibleSandboxedModules
+		}
 	}
 
 	if nodeType == "Import" {
@@ -495,11 +500,6 @@ func checkImportWithMode(stmt map[string]interface{}, errors *[]CompileError, al
 	} else if nodeType == "ImportFrom" {
 		// Check ImportFrom statements: check stmt.module
 		if module, ok := stmt["module"].(string); ok {
-			// Check for io module restrictions in complex mode
-			if module == "io" && mode == ModeComplex {
-				// io module is allowed, but check for forbidden operations later
-				return
-			}
 			if allowedModules != nil && !allowedModules[module] {
 				*errors = append(*errors, CompileError{
 					Type:    ForbiddenImport,
@@ -518,7 +518,129 @@ func checkImportWithMode(stmt map[string]interface{}, errors *[]CompileError, al
 	}
 }
 
-// getSuggestionForBuiltin returns a helpful suggestion for a forbidden builtin
+// CompatibleSandboxedModules blocks modules that provide file, network, shell,
+// or environment access even in CompatibleMode. These capabilities cannot be
+// safely allowed because they break determinism and can leak secrets.
+var CompatibleSandboxedModules = map[string]bool{
+	"os":          true,
+	"sys":         true,
+	"subprocess":  true,
+	"shlex":       true,
+	"select":      true,
+	"signal":      true,
+	"socket":      true,
+	"ssl":         true,
+	"http":        true,
+	"urllib":      true,
+	"requests":    true,
+	"ftplib":      true,
+	"poplib":      true,
+	"imaplib":     true,
+	"nntplib":     true,
+	"smtplib":     true,
+	"telnetlib":   true,
+	"paramiko":    true,
+	"ctypes":      true,
+	"mmap":        true,
+	"tempfile":    true,
+	"glob":        true,
+	"fnmatch":     true,
+	"linecache":   true,
+	"shutil":      true,
+	"fileinput":   true,
+	"code":        true,
+	"codeop":      true,
+	"py_compile":  true,
+	"compileall":  true,
+	"dis":         true,
+	"inspect":     true,
+	"ast":         true,
+	"symtable":    true,
+	"token":       true,
+	"keyword":     true,
+	"tokenize":    true,
+	"tabnanny":    true,
+	"pyclbr":      true,
+	"msilib":      true,
+	"msvcrt":      true,
+	"winreg":      true,
+	"winsound":    true,
+	"pty":         true,
+	"tty":         true,
+	"termios":     true,
+	"fcntl":       true,
+	"pipes":       true,
+	"posix":       true,
+	"pwd":         true,
+	"grp":         true,
+	"crypt":       true,
+	"spwd":        true,
+	"nis":         true,
+	"dbm":         true,
+	"sqlite3":     true,
+	"zlib":        true,
+	"gzip":        true,
+	"bz2":         true,
+	"lzma":        true,
+	"zipfile":     true,
+	"tarfile":     true,
+	"configparser": true,
+	"xml":         true,
+	"html":        true,
+	"calendar":    true,
+	"heapq":       true,
+	"bisect":      true,
+	"array":       true,
+	"weakref":     true,
+	"copy":        true,
+	"pprint":      true,
+	"reprlib":     true,
+	"enum":        true,
+	"dataclasses": true,
+	"abc":         true,
+	"atexit":      true,
+	"traceback":   true,
+	"warnings":    true,
+	"locale":      true,
+	"gettext":     true,
+	"getopt":      true,
+	"optparse":    true,
+	"argparse":    true,
+	"readline":    true,
+	"rlcompleter": true,
+	"cmd":         true,
+	"pdb":         true,
+	"profile":     true,
+	"hotshot":     true,
+	"timeit":      true,
+	"trace":       true,
+	"tracemalloc": true,
+	"resource":    true,
+	"faulthandler": true,
+	"concurrent":  true,
+	"asyncio":     true,
+	"threading":   true,
+	"multiprocessing": true,
+	"sched":       true,
+	"queue":       true,
+	"asyncore":    true,
+	"asynchat":    true,
+	"xmlrpc":      true,
+	"plistlib":    true,
+	"hashlib":     true,
+	"hmac":        true,
+	"secrets":     true,
+	"random":      true,
+	"statistics":  true,
+	"decimal":     true,
+	"fractions":   true,
+	"numbers":     true,
+	"math":        true,
+	"cmath":       true,
+	"collections": true,
+	"typing":      true,
+	"types":       true,
+}
 func getSuggestionForBuiltin(funcName string) string {
 	suggestions := map[string]string{
 		"print":    "Return data as part of your function output instead of printing",
