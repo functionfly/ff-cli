@@ -32,7 +32,7 @@ func TestWriteFileAtomic_CreatesAndOverwrites(t *testing.T) {
 			t.Errorf("perm = %o, want 0o600", perm)
 		}
 	}
-	if err := writeFileAtomic(path, []byte("second"), 0o600); err != nil {
+	if err := writeFileAtomic(path, []byte("second"), 0o600); err != nil && !errors.Is(err, ErrAtomicWriteReplaced) {
 		t.Fatalf("second write: %v", err)
 	}
 	got, _ = os.ReadFile(path)

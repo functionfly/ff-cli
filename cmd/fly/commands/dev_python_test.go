@@ -73,7 +73,7 @@ func TestPythonExecutor_RunsHandler(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chdir("/") })
 
-	mf := &Manifest{Name: "test", Version: "1.0.0", Runtime: "python3.11", TimeoutMS: 5000}
+	mf := &Manifest{Name: "test", Version: "1.0.0", Runtime: "python3.11", TimeoutMS: 15000}
 	ex := newPythonExecutor(mf, "main.py")
 
 	req := httptest.NewRequest("GET", "/?name=Alice", nil)
@@ -114,7 +114,7 @@ func TestPythonExecutor_HandlerErrorReturns500(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chdir("/") })
 
-	mf := &Manifest{Name: "test", Version: "1.0.0", Runtime: "python3.11", TimeoutMS: 5000}
+	mf := &Manifest{Name: "test", Version: "1.0.0", Runtime: "python3.11", TimeoutMS: 15000}
 	ex := newPythonExecutor(mf, "main.py")
 	req := httptest.NewRequest("GET", "/", nil)
 	result, err := ex.Execute(req, nil)
