@@ -1289,4 +1289,24 @@ fn serialize_output(output: &Output) -> i32 {
     // lifetime explicit.
     std::mem::forget(bytes);
     (ptr << 16) | (len_i32 & 0xFFFF)
+}
+
+// json_loads handles both string and Value inputs
+fn json_loads(value: &serde_json::Value) -> serde_json::Value {
+    if let Some(s) = value.as_str() {
+        match serde_json::from_str(s) {
+            Ok(parsed) => parsed,
+            Err(_) => value.clone(),
+        }
+    } else {
+        value.clone()
+    }
+}
+
+// json_loads_str parses a string directly as JSON
+fn json_loads_str(s: &str) -> serde_json::Value {
+    match serde_json::from_str(s) {
+        Ok(parsed) => parsed,
+        Err(_) => serde_json::Value::String(s.to_string()),
+    }
 }`))

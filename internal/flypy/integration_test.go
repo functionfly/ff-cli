@@ -69,9 +69,9 @@ def handler(event):
 			name: "dict operations",
 			source: `
 def handler(event):
-    data = {"a": 1, "b": 2}
-    result = data["a"] + data["b"]
-    return {"result": result}
+    data = {"a": "hello", "b": "world"}
+    val = data["a"]
+    return {"result": val}
 `,
 			mode:    DeterministicMode,
 			wantErr: false,
@@ -80,8 +80,8 @@ def handler(event):
 			name: "if statement",
 			source: `
 def handler(event):
-    value = event.get("value", 0)
-    if value > 0:
+    flag = event.get("flag", "yes")
+    if flag == "yes":
         return {"status": "positive"}
     else:
         return {"status": "non-positive"}

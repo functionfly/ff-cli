@@ -172,6 +172,12 @@ func generateCallSwitch(fn string, argStrs []string) string {
 		}
 		// Use a safe pattern: if the regex fails to compile, fall back to a pattern that matches nothing
 		return fmt.Sprintf("    Regex::new(%s).unwrap_or_else(|e| { eprintln!(\"Regex compile error: {}\", e); Regex::new(\"(?!)\").unwrap() })", argStrs[0])
+	case "list":
+		// list() creates an empty list; list(x) converts x to a list (clone in Rust)
+		if len(argStrs) == 0 {
+			return "    vec![]"
+		}
+		return fmt.Sprintf("    %s.clone()", argStrs[0])
 	default:
 		log.Printf("generateCall: unknown function %s with args %v", fn, argStrs)
 		return fmt.Sprintf("    // Error: unknown function %s(%s)", fn, strings.Join(argStrs, ", "))
@@ -229,7 +235,7 @@ func GenerateModuleCallWithKwargs(module, fn string, argStrs []string, kwargs ma
 			if len(argStrs) == 0 {
 				return handleError("csv.writer", ErrInvalidArguments)
 			}
-			return fmt.Sprintf("csv_writer(%s).unwrap_or_else(|e| { eprintln!(\"CSV writer error: {{}}\", e); String::new() })", argStrs[0])
+			return fmt.Sprintf("csv_writer(%s).unwrap_or_else(|e| { eprintln!(\"CSV writer error: {}\", e); String::new() })", argStrs[0])
 		case "DictReader":
 			// csv.DictReader(input, **kwargs) -> returns iterator of dicts
 			if len(argStrs) == 0 {
@@ -384,6 +390,10 @@ func GenerateModuleCallWithKwargs(module, fn string, argStrs []string, kwargs ma
 			if strings.Contains(argStrs[0], "format!(\"{}\", ") {
 				// This produces a String, so use json_loads_str
 				return fmt.Sprintf("json_loads_str(&%s)", argStrs[0])
+			} else if strings.HasPrefix(argStrs[0], "\"") && strings.HasSuffix(argStrs[0], "\".to_string()") {
+				// String literal with .to_string() suffix — extract the literal
+				literal := argStrs[0][:len(argStrs[0])-len(".to_string()")]
+				return fmt.Sprintf("json_loads_str(%s)", literal)
 			} else if strings.HasPrefix(argStrs[0], "\"") && strings.HasSuffix(argStrs[0], "\"") {
 				// String literal - parse it directly
 				return fmt.Sprintf("json_loads_str(%s)", argStrs[0])
@@ -395,7 +405,9 @@ func GenerateModuleCallWithKwargs(module, fn string, argStrs []string, kwargs ma
 			if len(argStrs) == 0 {
 				return handleError("json.dumps", ErrInvalidArguments)
 			}
-			return fmt.Sprintf("serde_json::to_string(%s).unwrap_or_else(|e| { eprintln!(\"JSON dumps error: {{}}\", e); String::new() })", argStrs[0])
+			// Strip /*Value*/ type hint prefix that can appear before variable references
+			arg := strings.TrimPrefix(argStrs[0], "/*Value*/")
+			return fmt.Sprintf("serde_json::to_string(&%s).unwrap_or_else(|e| { eprintln!(\"JSON dumps error: {}\", e); String::new() })", arg)
 		}
 	case "re":
 		switch fn {
@@ -413,17 +425,17 @@ func GenerateModuleCallWithKwargs(module, fn string, argStrs []string, kwargs ma
 			if len(argStrs) < 3 {
 				return handleError("re.sub", ErrInvalidArguments)
 			}
-			return fmt.Sprintf("re_sub(%s, %s, %s).unwrap_or_else(|e| { eprintln!(\"Regex sub error: {{}}\", e); String::new() })", argStrs[0], argStrs[1], argStrs[2])
+			return fmt.Sprintf("re_sub(%s, %s, %s).unwrap_or_else(|e| { eprintln!(\"Regex sub error: {}\", e); String::new() })", argStrs[0], argStrs[1], argStrs[2])
 		case "findall":
 			if len(argStrs) < 2 {
 				return handleError("re.findall", ErrInvalidArguments)
 			}
-			return fmt.Sprintf("re_findall(%s, %s).unwrap_or_else(|e| { eprintln!(\"Regex findall error: {{}}\", e); vec![] })", argStrs[0], argStrs[1])
+			return fmt.Sprintf("re_findall(%s, %s).unwrap_or_else(|e| { eprintln!(\"Regex findall error: {}\", e); vec![] })", argStrs[0], argStrs[1])
 		case "split":
 			if len(argStrs) < 2 {
 				return handleError("re.split", ErrInvalidArguments)
 			}
-			return fmt.Sprintf("re_split(%s, %s).unwrap_or_else(|e| { eprintln!(\"Regex split error: {{}}\", e); vec![] })", argStrs[0], argStrs[1])
+			return fmt.Sprintf("re_split(%s, %s).unwrap_or_else(|e| { eprintln!(\"Regex split error: {}\", e); vec![] })", argStrs[0], argStrs[1])
 		}
 	case "hashlib":
 		switch fn {
@@ -447,7 +459,7 @@ func GenerateModuleCallWithKwargs(module, fn string, argStrs []string, kwargs ma
 			if len(argStrs) == 0 {
 				return handleError("base64.decode", ErrInvalidArguments)
 			}
-			return fmt.Sprintf("base64_decode(%s).unwrap_or_else(|e| { eprintln!(\"Base64 decode error: {{}}\", e); vec![] })", argStrs[0])
+			return fmt.Sprintf("base64_decode(%s).unwrap_or_else(|e| { eprintln!(\"Base64 decode error: {}\", e); vec![] })", argStrs[0])
 		}
 	}
 	return fmt.Sprintf("/* unknown module: %s.%s */", module, fn)
