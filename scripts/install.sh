@@ -36,12 +36,13 @@ INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 echo "Installing ff-cli ${VERSION} for ${OS}/${ARCH}..."
 curl -fsSL "$URL" -o "/tmp/${FILENAME}"
 
+EXTRACT_DIR="/tmp/ff_${VERSION}_${OS}_${ARCH}"
 case "$EXT" in
   tar.gz) tar -xzf "/tmp/${FILENAME}" -C /tmp ;;
   zip)    unzip -o "/tmp/${FILENAME}" -d /tmp ;;
 esac
 
-sudo mv /tmp/ff "${INSTALL_DIR}/ff"
+sudo mv "${EXTRACT_DIR}/ff" "${INSTALL_DIR}/ff"
 sudo chmod +x "${INSTALL_DIR}/ff"
 rm -f "/tmp/${FILENAME}"
 echo "Installed ff $(ff version --short 2>/dev/null || echo "${VERSION}")"
