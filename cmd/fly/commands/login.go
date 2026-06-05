@@ -158,7 +158,6 @@ const (
 func NewLoginCmd() *cobra.Command {
 	var provider string
 	var noBrowser bool
-	var inviteCode string
 	var nonInteractive bool
 	var token string
 
@@ -170,16 +169,14 @@ func NewLoginCmd() *cobra.Command {
 			"Non-interactive mode defaults to OAuth and prints the auth URL; set FF_TOKEN to use a token directly.",
 		Example: `  ff login
   ff login --provider github
-  ff login --invite-code CODE
   ff login --no-browser
   FF_TOKEN=ff_xxx ff login --no-interactive`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runLogin(provider, noBrowser, inviteCode, nonInteractive, token)
+			return runLogin(provider, noBrowser, nonInteractive, token)
 		},
 	}
 	cmd.Flags().StringVar(&provider, "provider", "github", "OAuth provider (github, google)")
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Print the auth URL instead of opening a browser")
-	cmd.Flags().StringVar(&inviteCode, "invite-code", "", "Invite code for OAuth signup (or set FF_INVITE_CODE)")
 	cmd.Flags().BoolVar(&nonInteractive, "no-interactive", false, "Fail without prompting in non-interactive environments")
 	cmd.Flags().StringVar(&token, "token", "", "Use a CLI access token directly (or set FF_TOKEN)")
 	return cmd
@@ -194,7 +191,7 @@ func NewLoginCmd() *cobra.Command {
 // Non-interactive mode bypasses the form: if FF_TOKEN / --token is set it is
 // validated and saved; otherwise the OAuth URL is printed and the user is
 // expected to complete the flow manually.
-func runLogin(provider string, noBrowser bool, inviteCodeFlag string, nonInteractive bool, tokenFlag string) error {
+func runLogin(provider string, noBrowser bool, nonInteractive bool, tokenFlag string) error {
 	// Token env / flag short-circuit (works in both interactive and non-interactive).
 	// Run this BEFORE the non-interactive env-var check so a --token flag
 	// is honoured even when FF_TOKEN is not set in the environment.
@@ -211,15 +208,9 @@ func runLogin(provider string, noBrowser bool, inviteCodeFlag string, nonInterac
 		}
 	}
 
-	// Invite code resolution.
-	inviteCode := inviteCodeFlag
-	if inviteCode == "" {
-		inviteCode = os.Getenv("FF_INVITE_CODE")
-	}
-
 	// Non-interactive: skip the form, default to OAuth + print URL.
 	if nonInteractive || !IsInteractive() {
-		return runBrowserOAuth(provider, noBrowser, inviteCode)
+		return runBrowserOAuth(provider, noBrowser)
 	}
 
 	// Interactive: Resend-style clack form.
@@ -235,7 +226,7 @@ func runLogin(provider string, noBrowser bool, inviteCodeFlag string, nonInterac
 		}
 		return completeManualToken(provider, tok)
 	default:
-		return runBrowserOAuth(provider, noBrowser, inviteCode)
+		return runBrowserOAuth(provider, noBrowser)
 	}
 }
 
@@ -366,7 +357,7 @@ func completeManualToken(provider, token string) error {
 // dance and then redirects the browser to the local callback with ?token=...
 // in the query string. We don't run a separate code-for-token exchange — the
 // auth site hands the token to us directly.
-func runBrowserOAuth(provider string, noBrowser bool, inviteCode string) error {
+func runBrowserOAuth(provider string, noBrowser bool) error {
 	baseURL := resolveBaseURL()
 
 	authSrv, err := newAuthServer()
@@ -380,7 +371,7 @@ func runBrowserOAuth(provider string, noBrowser bool, inviteCode string) error {
 	// preserves it on the way back; the callback handler validates it.
 	callbackURL := fmt.Sprintf("http://127.0.0.1:%d/callback?state=%s", authSrv.Port(), url.QueryEscape(state))
 
-	authURL, err := getOAuthURLFromAPI(baseURL, provider, callbackURL, inviteCode)
+	authURL, err := getOAuthURLFromAPI(baseURL, provider, callbackURL)
 	if err != nil {
 		return fmt.Errorf("get OAuth URL: %w", err)
 	}
@@ -470,20 +461,17 @@ func printLoginSuccess(username, email, provider string, expiresAt time.Time) {
 // getOAuthURLFromAPI calls GET /auth/oauth/url?provider=...&redirect_uri=...
 // and returns the auth-site URL the browser should be opened to. The API
 // constructs the auth.site/login URL with the right OAuth parameters baked
-// in, including invite-code handling, and hands it back in {"url": "..."}.
+// in and hands it back in {"url": "..."}.
 //
 // It includes retry logic with exponential backoff for transient network
 // errors. The endpoint is GET-only; POST is rejected with 405 and falls
 // through to the public function-routing handler as if the path were an app
 // slug — that's the "Invalid app slug" symptom the original bug surfaced.
-func getOAuthURLFromAPI(baseURL, provider, redirectURI, inviteCode string) (string, error) {
+func getOAuthURLFromAPI(baseURL, provider, redirectURI string) (string, error) {
 	q := url.Values{}
 	q.Set("provider", provider)
 	if redirectURI != "" {
 		q.Set("redirect_uri", redirectURI)
-	}
-	if inviteCode != "" {
-		q.Set("invite_code", inviteCode)
 	}
 	endpoint := baseURL + "/auth/oauth/url?" + q.Encode()
 
@@ -529,9 +517,6 @@ func getOAuthURLFromAPI(baseURL, provider, redirectURI, inviteCode string) (stri
 			msg := strings.TrimSpace(string(body))
 			if msg == "" {
 				return "", fmt.Errorf("API returned %d", resp.StatusCode)
-			}
-			if resp.StatusCode == 400 && contains(msg, "invite code") {
-				return "", fmt.Errorf("API returned %d: %s\n   → FunctionFly is invite-only. Use --invite-code or set FF_INVITE_CODE", resp.StatusCode, msg)
 			}
 			return "", fmt.Errorf("API returned %d: %s", resp.StatusCode, msg)
 		}

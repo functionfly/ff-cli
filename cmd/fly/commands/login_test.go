@@ -176,7 +176,7 @@ func TestRunLogin_TokenFlagShortCircuitNonInteractive(t *testing.T) {
 	t.Setenv("FF_INVITE_CODE", "")
 	// Use an obviously-invalid token so we don't depend on a live API.
 	// What matters is that we get past the env-var check.
-	err := runLogin("github", false, "", true, "this-token-is-long-enough-to-pass-length-check")
+	err := runLogin("github", false, true, "this-token-is-long-enough-to-pass-length-check")
 	if err == nil {
 		t.Fatal("expected error from invalid token, got nil")
 	}
@@ -213,7 +213,7 @@ func TestGetOAuthURLFromAPI_UsesGetWithQueryParams(t *testing.T) {
 
 	authURL, err := getOAuthURLFromAPI(
 		srv.URL, "github",
-		"http://127.0.0.1:9999/callback?state=abc", "invite-123",
+		"http://127.0.0.1:9999/callback?state=abc",
 	)
 	if err != nil {
 		t.Fatalf("getOAuthURLFromAPI: %v", err)
@@ -236,21 +236,18 @@ func TestGetOAuthURLFromAPI_UsesGetWithQueryParams(t *testing.T) {
 	if got := gotQuery.Get("redirect_uri"); got != "http://127.0.0.1:9999/callback?state=abc" {
 		t.Errorf("redirect_uri = %q", got)
 	}
-	if got := gotQuery.Get("invite_code"); got != "invite-123" {
-		t.Errorf("invite_code = %q, want invite-123", got)
-	}
 	// Make sure we never reintroduce the old form-body fields.
-	for _, banned := range []string{"app_id", "app_slug", "code_challenge", "code_challenge_method"} {
+	for _, banned := range []string{"app_id", "app_slug", "code_challenge", "code_challenge_method", "invite_code"} {
 		if _, ok := gotQuery[banned]; ok {
 			t.Errorf("query should not contain %q", banned)
 		}
 	}
 }
 
-// TestGetOAuthURLFromAPI_OmitsInviteWhenEmpty covers the invite-less sign-in
-// path: the API rejects the empty string just as it does the missing field,
-// so we don't send it.
-func TestGetOAuthURLFromAPI_OmitsInviteWhenEmpty(t *testing.T) {
+// TestGetOAuthURLFromAPI_OmitsRedirectWhenEmpty covers the no-redirect sign-in
+// path: when the caller doesn't supply a redirect URI the request should
+// still be a well-formed GET with just the provider.
+func TestGetOAuthURLFromAPI_OmitsRedirectWhenEmpty(t *testing.T) {
 	var gotQuery url.Values
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotQuery = r.URL.Query()
@@ -259,33 +256,14 @@ func TestGetOAuthURLFromAPI_OmitsInviteWhenEmpty(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if _, err := getOAuthURLFromAPI(srv.URL, "google", "", ""); err != nil {
+	if _, err := getOAuthURLFromAPI(srv.URL, "google", ""); err != nil {
 		t.Fatalf("getOAuthURLFromAPI: %v", err)
-	}
-	if _, ok := gotQuery["invite_code"]; ok {
-		t.Error("invite_code should be omitted when empty")
 	}
 	if got := gotQuery.Get("redirect_uri"); got != "" {
 		t.Errorf("redirect_uri = %q, want empty", got)
 	}
-}
-
-// TestGetOAuthURLFromAPI_InvitesHintError is a regression test for the
-// "invite code is required" response: the CLI surfaces it as a friendly
-// hint rather than a bare 400.
-func TestGetOAuthURLFromAPI_InvitesHintError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, `{"message":"invite code is required to sign up with OAuth"}`)
-	}))
-	defer srv.Close()
-
-	_, err := getOAuthURLFromAPI(srv.URL, "github", "", "")
-	if err == nil {
-		t.Fatal("expected error for invite-required response")
-	}
-	if !strings.Contains(err.Error(), "invite-only") {
-		t.Errorf("error should mention invite-only, got: %v", err)
+	if got := gotQuery.Get("provider"); got != "google" {
+		t.Errorf("provider = %q, want google", got)
 	}
 }
 
