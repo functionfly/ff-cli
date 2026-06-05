@@ -31,10 +31,8 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: golangci/golangci-lint-action@v8
-        with:
-          version: latest
-          args: --timeout=5m
+      - name: Run golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && golangci-lint run --timeout=5m ./...
 
   test:
     name: Test (${{ matrix.os }})
@@ -87,7 +85,8 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: goreleaser/goreleaser-action@v6
+      - name: Run GoReleaser
+        uses: goreleaser-action@v6
         with:
           version: '~> v2'
           args: build --snapshot --clean --single-target
