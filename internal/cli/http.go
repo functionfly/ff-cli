@@ -19,7 +19,7 @@ var defaultHTTPClient = &http.Client{
 	Transport: &http.Transport{
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 20,
-		IdleConnTimeout:    90 * time.Second,
+		IdleConnTimeout:     90 * time.Second,
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,
 			KeepAlive: 30 * time.Second,
@@ -167,7 +167,7 @@ func insecureTransport() *http.Transport {
 	return &http.Transport{
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 20,
-		IdleConnTimeout:    90 * time.Second,
+		IdleConnTimeout:     90 * time.Second,
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,
 			KeepAlive: 30 * time.Second,

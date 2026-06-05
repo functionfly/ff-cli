@@ -369,9 +369,3 @@ func getOrCompile(wasmBytes []byte) (*cachedModule, error) {
 	actual, _ := moduleCache.LoadOrStore(key, cm)
 	return actual.(*cachedModule), nil
 }
-
-// moduleCacheKeyBytes is an alias of moduleCacheKey for callers that
-// already import this file.
-func moduleCacheKeyBytes(wasmBytes []byte) string {
-	return moduleCacheKey(wasmBytes)
-}
