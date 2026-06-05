@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -26,8 +27,10 @@ func TestWriteFileAtomic_CreatesAndOverwrites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if perm := info.Mode().Perm(); perm != 0o600 {
-		t.Errorf("perm = %o, want 0o600", perm)
+	if runtime.GOOS != "windows" {
+		if perm := info.Mode().Perm(); perm != 0o600 {
+			t.Errorf("perm = %o, want 0o600", perm)
+		}
 	}
 	if err := writeFileAtomic(path, []byte("second"), 0o600); err != nil {
 		t.Fatalf("second write: %v", err)

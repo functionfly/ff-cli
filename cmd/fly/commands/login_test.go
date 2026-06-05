@@ -2,6 +2,7 @@ package commands
 
 import (
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -113,6 +114,9 @@ func TestTokenRateLimit_AllowsUpToLimit(t *testing.T) {
 func TestLoadCredentials_LegacyFallback(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", tmp)
+	}
 	legacy := tmp + "/.functionfly/credentials.json"
 	if err := os.MkdirAll(tmp+"/.functionfly", 0o700); err != nil {
 		t.Fatal(err)

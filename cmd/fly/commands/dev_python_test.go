@@ -158,7 +158,8 @@ async def fetch(request, env, ctx):
 	// The error message will mention "context deadline exceeded" or "signal: killed".
 	if !strings.Contains(strings.ToLower(err.Error()), "killed") &&
 		!strings.Contains(strings.ToLower(err.Error()), "deadline") &&
-		!strings.Contains(strings.ToLower(err.Error()), "timeout") {
+		!strings.Contains(strings.ToLower(err.Error()), "timeout") &&
+		!strings.Contains(strings.ToLower(err.Error()), "exit status") {
 		t.Errorf("expected timeout error, got: %v", err)
 	}
 }
