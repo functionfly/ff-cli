@@ -41,7 +41,18 @@ case "$EXT" in
   zip)    unzip -o "/tmp/${FILENAME}" -d /tmp ;;
 esac
 
-sudo mv /tmp/ff "${INSTALL_DIR}/ff"
+EXTRACTED_DIR="/tmp/ff_${VERSION}_${OS}_${ARCH}"
+
+if [ -f "${EXTRACTED_DIR}/ff" ]; then
+  sudo mv "${EXTRACTED_DIR}/ff" "${INSTALL_DIR}/ff"
+elif [ -f "/tmp/ff" ]; then
+  sudo mv "/tmp/ff" "${INSTALL_DIR}/ff"
+else
+  echo "Error: could not find extracted ff binary" >&2
+  exit 1
+fi
+
 sudo chmod +x "${INSTALL_DIR}/ff"
 rm -f "/tmp/${FILENAME}"
+rm -rf "${EXTRACTED_DIR}"
 echo "Installed ff $(ff version --short 2>/dev/null || echo "${VERSION}")"
