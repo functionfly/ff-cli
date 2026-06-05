@@ -2,6 +2,7 @@
 set -e
 
 VERSION="${VERSION:-1.0.0}"
+TAG="v${VERSION}"
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 
@@ -20,7 +21,7 @@ esac
 
 EXT="${OS}.tar.gz"
 FILENAME="ff_${VERSION}_${OS}_${ARCH}.${EXT}"
-URL="https://github.com/functionfly/ff-cli/releases/download/${VERSION}/${FILENAME}"
+URL="https://github.com/functionfly/ff-cli/releases/download/${TAG}/${FILENAME}"
 
 echo "Installing ff-cli ${VERSION} for ${OS}/${ARCH}..."
 curl -fsSL "$URL" -o "/tmp/${FILENAME}"
