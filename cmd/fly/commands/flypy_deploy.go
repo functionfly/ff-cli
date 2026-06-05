@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -358,7 +359,7 @@ func deployToRegistry(registryURL string, req *cli.DeployRequest, token string) 
 		Transport: &http.Transport{
 			MaxIdleConns:        100,
 			MaxIdleConnsPerHost: 20,
-			IdleConnTimeout:     90 * time.Second,
+			IdleConnTimeout:    90 * time.Second,
 		},
 	}
 
@@ -400,6 +401,25 @@ func deployToRegistry(registryURL string, req *cli.DeployRequest, token string) 
 	}
 
 	return &deployResp, nil
+}
+
+func parseRegistryURL(raw string) (*url.URL, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid registry URL %q: %w", raw, err)
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("registry URL missing host: %s", raw)
+	}
+	host, _, portErr := net.SplitHostPort(u.Host)
+	if portErr != nil && strings.Contains(portErr.Error(), "missing port") {
+		if u.Scheme == "https" {
+			u.Host = net.JoinHostPort(host, "443")
+		} else if u.Scheme == "http" {
+			u.Host = net.JoinHostPort(host, "80")
+		}
+	}
+	return u, nil
 }
 
 // base64Encode encodes data to base64

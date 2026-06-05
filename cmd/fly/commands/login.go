@@ -40,10 +40,10 @@ func newAuthServer(state, codeVerifier string) (*authServer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not start callback server: %w", err)
 	}
-	mux := http.NewServeMux()
+mux := http.NewServeMux()
 	as := &authServer{
-		listener: listener,
-		mux:      mux,
+		listener:     listener,
+		mux:          mux,
 		server: &http.Server{
 			Handler:           mux,
 			ReadHeaderTimeout: 30 * time.Second,

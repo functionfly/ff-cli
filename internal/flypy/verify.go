@@ -32,11 +32,11 @@ func SignArtifact(privateKey []byte, determinismHash string) ([]byte, error) {
 }
 
 var (
-	errNilArtifact       = &verifyError{msg: "nil artifact"}
-	errNoSignature       = &verifyError{msg: "artifact has no signature"}
-	errInvalidPublicKey  = &verifyError{msg: "invalid public key size"}
-	errInvalidPrivateKey = &verifyError{msg: "invalid private key size"}
-	errBadSignature      = &verifyError{msg: "signature verification failed"}
+	errNilArtifact        = &verifyError{msg: "nil artifact"}
+	errNoSignature        = &verifyError{msg: "artifact has no signature"}
+	errInvalidPublicKey   = &verifyError{msg: "invalid public key size"}
+	errInvalidPrivateKey  = &verifyError{msg: "invalid private key size"}
+	errBadSignature       = &verifyError{msg: "signature verification failed"}
 )
 
 type verifyError struct{ msg string }
