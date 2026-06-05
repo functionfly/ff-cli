@@ -54,6 +54,21 @@ nfpms:
           - apk
       bindir: /usr/local/bin
 
+brews:
+    - name: ff
+      repository:
+          owner: functionfly
+          name: homebrew-tap
+          token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      homepage: https://functionfly.com
+      description: FunctionFly CLI — Go from idea to global API in under 60 seconds
+      license: Apache-2.0
+      ids:
+          - default
+      skip_upload: true
+      install: |
+          bin.install "ff"
+
 checksum:
     name_template: "checksums.txt"
     algorithm: sha256
