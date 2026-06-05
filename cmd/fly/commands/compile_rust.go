@@ -27,7 +27,7 @@ func newCompileRustCmd() *cobra.Command {
 		Long: `Compile a Rust function to WebAssembly (WASM).
 
 This command uses cargo to build your Rust function targeting the
-wasm32-wasi WebAssembly runtime for FunctionFly.`,
+wasm32-wasip1 WebAssembly runtime for FunctionFly.`,
 		Example: `  # Compile a Rust function (debug mode)
   ff compile rust --input ./Cargo.toml --output ./dist
 
@@ -65,7 +65,7 @@ func runCompileRust(cmd *cobra.Command) error {
 		return fmt.Errorf("input must be a Cargo.toml file or a directory containing Cargo.toml")
 	}
 
-	// Check if wasm32-wasi target is installed
+	// Check if wasm32-wasip1 target is installed
 	if err := checkWasiTarget(); err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func runCompileRust(cmd *cobra.Command) error {
 	fmt.Println()
 
 	// Build the project
-	target := "wasm32-wasi"
+	target := "wasm32-wasip1"
 	args := []string{"build", "--target", target}
 
 	if compileRustRelease {
@@ -157,23 +157,23 @@ func runCompileRust(cmd *cobra.Command) error {
 	return nil
 }
 
-// checkWasiTarget checks if wasm32-wasi target is installed
+// checkWasiTarget checks if wasm32-wasip1 target is installed
 func checkWasiTarget() error {
 	checkCmd := exec.Command("rustup", "target", "list", "--installed")
 	output, err := checkCmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to check wasm32-wasi target: %w", err)
+		return fmt.Errorf("failed to check wasm32-wasip1 target: %w", err)
 	}
 
-	if !contains(string(output), "wasm32-wasi") {
-		fmt.Println("Installing wasm32-wasi target...")
-		installCmd := exec.Command("rustup", "target", "add", "wasm32-wasi")
+	if !contains(string(output), "wasm32-wasip1") {
+		fmt.Println("Installing wasm32-wasip1 target...")
+		installCmd := exec.Command("rustup", "target", "add", "wasm32-wasip1")
 		installCmd.Stdout = os.Stdout
 		installCmd.Stderr = os.Stderr
 
 		if err := installCmd.Run(); err != nil {
-			return fmt.Errorf("failed to install wasm32-wasi target: %w\n"+
-				"Run: rustup target add wasm32-wasi", err)
+			return fmt.Errorf("failed to install wasm32-wasip1 target: %w\n"+
+				"Run: rustup target add wasm32-wasip1", err)
 		}
 	}
 
