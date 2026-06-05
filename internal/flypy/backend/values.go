@@ -68,7 +68,11 @@ func (ctx *CodegenContext) generateValue(val ir.Value) string {
 	case ir.Literal:
 		switch val.Type {
 		case ir.IRTypeString:
-			return fmt.Sprintf("\"%v\".to_string()", val.Value)
+			// Escape backslashes and double quotes for Rust string literals
+			str := fmt.Sprintf("%v", val.Value)
+			str = strings.ReplaceAll(str, `\`, `\\`)
+			str = strings.ReplaceAll(str, `"`, `\"`)
+			return fmt.Sprintf("\"%s\".to_string()", str)
 		case ir.IRTypeBool:
 			// Handle boolean literals
 			if val.Value == true || fmt.Sprintf("%v", val.Value) == "true" {
@@ -510,8 +514,8 @@ func GenerateListComp(element string, generators []map[string]interface{}) strin
 }
 
 // generateSlice generates Rust code for slice operations.
-// Python: arr[1:3], arr[:5], arr[2:], arr[::2]
-// Rust: arr[1..3].to_vec(), arr[..5].to_vec(), arr[2..].to_vec(), arr.iter().step_by(2).cloned().collect()
+// Python: arr[1:3], arr[:5], arr[2:], arr[::2], arr[-2:]
+// Rust: arr[1..3].to_vec(), arr[..5].to_vec(), arr[2..].to_vec(), arr.iter().step_by(2).cloned().collect(), arr[arr.len()-2..].to_vec()
 func (ctx *CodegenContext) generateSlice(value string, sliceVal ir.Value) string {
 	// Slice value contains lower, upper, step info
 	if sliceMap, ok := sliceVal.Value.(map[string]interface{}); ok {
@@ -535,6 +539,30 @@ func (ctx *CodegenContext) generateSlice(value string, sliceVal ir.Value) string
 			}
 		}
 
+		// Helper to convert a bound to a Rust slice expression, handling negative indices
+		convertBound := func(bound, value string, isLower bool) string {
+			if bound == "" {
+				return ""
+			}
+			// Check for negative literal: (-N) or -N
+			negative := false
+			absVal := bound
+			if len(bound) > 1 && bound[0] == '(' && bound[len(bound)-1] == ')' {
+				inner := bound[1 : len(bound)-1]
+				if len(inner) > 0 && inner[0] == '-' {
+					negative = true
+					absVal = inner[1:]
+				}
+			} else if len(bound) > 0 && bound[0] == '-' {
+				negative = true
+				absVal = bound[1:]
+			}
+			if negative {
+				return fmt.Sprintf("%s.len().saturating_sub(%s)", value, absVal)
+			}
+			return bound
+		}
+
 		// Handle different slice patterns
 		if step != "" && step != "1" {
 			// Slice with step: arr[::2] or arr[1:5:2]
@@ -542,9 +570,9 @@ func (ctx *CodegenContext) generateSlice(value string, sliceVal ir.Value) string
 				lower = "0"
 			}
 			if upper == "" {
-				return fmt.Sprintf("%s.iter().skip(%s).step_by(%s).cloned().collect::<Vec<_>>()", value, lower, step)
+				return fmt.Sprintf("%s.iter().skip(%s).step_by(%s).cloned().collect::<Vec<_>>()", value, convertBound(lower, value, true), step)
 			}
-			return fmt.Sprintf("%s[%s..%s].iter().step_by(%s).cloned().collect::<Vec<_>>()", value, lower, upper, step)
+			return fmt.Sprintf("%s[%s..%s].iter().step_by(%s).cloned().collect::<Vec<_>>()", value, convertBound(lower, value, true), convertBound(upper, value, false), step)
 		}
 
 		// Standard slice without step
@@ -553,13 +581,13 @@ func (ctx *CodegenContext) generateSlice(value string, sliceVal ir.Value) string
 			return fmt.Sprintf("%s.clone()", value)
 		} else if lower == "" {
 			// arr[:upper]
-			return fmt.Sprintf("%s[..%s].to_vec()", value, upper)
+			return fmt.Sprintf("%s[..%s].to_vec()", value, convertBound(upper, value, false))
 		} else if upper == "" {
 			// arr[lower:]
-			return fmt.Sprintf("%s[%s..].to_vec()", value, lower)
+			return fmt.Sprintf("%s[%s..].to_vec()", value, convertBound(lower, value, true))
 		} else {
 			// arr[lower:upper]
-			return fmt.Sprintf("%s[%s..%s].to_vec()", value, lower, upper)
+			return fmt.Sprintf("%s[%s..%s].to_vec()", value, convertBound(lower, value, true), convertBound(upper, value, false))
 		}
 	}
 

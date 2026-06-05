@@ -32,6 +32,11 @@ type CodegenContext struct {
 	// when the variable is referenced (the IR's reference kind leaves the
 	// type as unknown, which would otherwise force an unnecessary coercion).
 	localTypes map[string]string
+
+	// reassignedVars tracks local variables that are reassigned after their
+	// initial declaration (via plain reassignment, aug_assign, or assign_subscript).
+	// These need `let mut` instead of `let` at their declaration site.
+	reassignedVars map[string]bool
 }
 
 // newCodegenContext creates a fresh CodegenContext for a compilation pass.
@@ -42,6 +47,7 @@ func newCodegenContext() *CodegenContext {
 		declaredVariables:    make(map[string]bool),
 		hoistedVariableNames: make(map[string]bool),
 		localTypes:           make(map[string]string),
+		reassignedVars:       make(map[string]bool),
 	}
 }
 
@@ -77,6 +83,10 @@ func GenerateFunctionBody(fn *ir.Function) string {
 	// Collect all variables that need to be hoisted (parameters that are reassigned)
 	// These need to be declared at function level with let mut
 	hoistedParams := collectReassignedParams(fn.Body, fn.Parameters)
+
+	// Pre-scan for local variables that are reassigned after initial declaration.
+	// These need `let mut` at their first declaration site.
+	ctx.reassignedVars = collectAllReassignedVars(fn.Body)
 
 	// Initialize hoisted variable names tracking - these should NOT use input. prefix
 	for _, varName := range hoistedParams {
@@ -224,6 +234,10 @@ func (ctx *CodegenContext) generateOperationWithIndent(op ir.Operation, indent i
 		// If assigning from dict.get() (serde_json::Value), check if we should extract string
 		if strings.Contains(value, ".get(") && shouldExtractString(op.Result) {
 			return fmt.Sprintf("%slet mut %s = %s.as_str().unwrap_or(\"\").to_string();\n", indentStr, op.Result, value)
+		}
+		// Check if this variable will be reassigned later — if so, declare as mutable
+		if ctx.reassignedVars[op.Result] {
+			return fmt.Sprintf("%slet mut %s = %s;\n", indentStr, op.Result, value)
 		}
 		return fmt.Sprintf("%slet %s = %s;\n", indentStr, op.Result, value)
 	case "assign_subscript":
@@ -485,6 +499,62 @@ func collectAssignedVars(ops []ir.Operation) map[string]bool {
 		}
 	}
 	return vars
+}
+
+// collectAllReassignedVars scans the IR to find local variables that are
+// reassigned after their initial declaration. This includes:
+// - Variables assigned more than once (e.g., x = 1; x = 2;)
+// - Variables modified via aug_assign (e.g., x += 1)
+// - Variables modified via assign_subscript (e.g., d["key"] = value)
+// These variables need `let mut` at their first declaration site.
+func collectAllReassignedVars(ops []ir.Operation) map[string]bool {
+	// First pass: count how many times each variable is assigned
+	assignCounts := make(map[string]bool)
+	reassigned := make(map[string]bool)
+
+	var scan func(ops []ir.Operation)
+	scan = func(ops []ir.Operation) {
+		for _, op := range ops {
+			switch op.Type {
+			case "assign":
+				if op.Result != "" {
+					if assignCounts[op.Result] {
+						// Already assigned before — this is a reassignment
+						reassigned[op.Result] = true
+					}
+					assignCounts[op.Result] = true
+				}
+			case "aug_assign":
+				// x += 1, x -= 1, etc. always requires mut
+				if op.Result != "" {
+					reassigned[op.Result] = true
+				}
+			case "assign_subscript":
+				// d["key"] = value requires mut on the target
+				if len(op.Operands) > 0 {
+					if op.Operands[0].Kind == ir.Reference {
+						if name, ok := op.Operands[0].Value.(string); ok {
+							reassigned[name] = true
+						}
+					}
+				}
+			case "if":
+				scan(op.Body)
+				scan(op.ElseBody)
+			case "for", "while":
+				scan(op.Body)
+			case "try":
+				scan(op.Body)
+				for _, handler := range op.Handlers {
+					scan(handler.Body)
+				}
+				scan(op.FinallyBody)
+			}
+		}
+	}
+
+	scan(ops)
+	return reassigned
 }
 
 // collectReassignedParams finds parameters that are reassigned in the function body.
