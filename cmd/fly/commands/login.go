@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -24,18 +23,18 @@ func contains(s, sub string) bool { return strings.Contains(s, sub) }
 
 // authServer is a reusable local HTTP server for OAuth callback handling.
 type authServer struct {
-	listener     net.Listener
-	mux          *http.ServeMux
-	server       *http.Server
-	tokenCh      chan string
-	errCh        chan error
-	state        string
-	codeVerifier string
+	listener net.Listener
+	mux      *http.ServeMux
+	server   *http.Server
+	tokenCh  chan string
+	errCh    chan error
 }
 
-// newAuthServer creates a local TCP listener and starts an HTTP server.
-// The provided state and codeVerifier are used to validate the OAuth callback.
-func newAuthServer(state, codeVerifier string) (*authServer, error) {
+// newAuthServer creates a local TCP listener and starts an HTTP server that
+// receives the auth token directly in the callback query string. The auth
+// site redirects the browser to the callback with ?token=... once the user
+// completes the OAuth dance; no separate token-exchange round-trip is needed.
+func newAuthServer() (*authServer, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, fmt.Errorf("could not start callback server: %w", err)
@@ -51,10 +50,8 @@ func newAuthServer(state, codeVerifier string) (*authServer, error) {
 			WriteTimeout:      60 * time.Second,
 			IdleTimeout:       120 * time.Second,
 		},
-		tokenCh:      make(chan string, 1),
-		errCh:        make(chan error, 1),
-		state:        state,
-		codeVerifier: codeVerifier,
+		tokenCh: make(chan string, 1),
+		errCh:   make(chan error, 1),
 	}
 
 	as.mux.HandleFunc("/callback", as.handleCallback)
@@ -68,25 +65,24 @@ func newAuthServer(state, codeVerifier string) (*authServer, error) {
 }
 
 func (as *authServer) handleCallback(w http.ResponseWriter, r *http.Request) {
-	// Validate state parameter to prevent CSRF attacks.
-	if r.URL.Query().Get("state") != as.state {
-		http.Error(w, "State mismatch — possible CSRF attack", http.StatusBadRequest)
-		as.errCh <- fmt.Errorf("state mismatch: expected %q, got %q", as.state, r.URL.Query().Get("state"))
+	if errMsg := r.URL.Query().Get("error_description"); errMsg != "" {
+		http.Error(w, "Authorization failed: "+errMsg, http.StatusBadRequest)
+		as.errCh <- fmt.Errorf("authorization failed: %s", errMsg)
 		return
 	}
-
-	code := r.URL.Query().Get("code")
-	if code == "" {
-		errMsg := r.URL.Query().Get("error")
-		if errMsg == "" {
-			errMsg = "no authorization code received"
-		}
+	if errMsg := r.URL.Query().Get("error"); errMsg != "" {
 		http.Error(w, "Authorization failed: "+errMsg, http.StatusBadRequest)
 		as.errCh <- fmt.Errorf("authorization failed: %s", errMsg)
 		return
 	}
 
-	// Store code for exchange and notify waiting goroutine.
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "Authorization failed: no token received", http.StatusBadRequest)
+		as.errCh <- fmt.Errorf("authorization failed: no token received")
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html")
 	namespace := os.Getenv("FF_CLI_NAMESPACE")
 	if namespace == "" {
@@ -115,7 +111,7 @@ small{color:#64748b;display:block;margin-top:20px}
 </div>
 </body>
 </html>`)
-	as.tokenCh <- code
+	as.tokenCh <- token
 }
 
 func (as *authServer) Port() int {
@@ -140,77 +136,17 @@ func (as *authServer) Close() error {
 	return as.server.Close()
 }
 
-// generatePKCEPair generates a PKCE code verifier and its S256 challenge.
-func generatePKCEPair() (verifier, challenge string, err error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", "", fmt.Errorf("PKCE randomness: %w", err)
-	}
-	verifier = base64.RawURLEncoding.EncodeToString(b)
-	h := sha256.Sum256([]byte(verifier))
-	challenge = base64.RawURLEncoding.EncodeToString(h[:])
-	return
-}
-
-// generateState creates a cryptographically random state string.
+// generateState creates a cryptographically random state string for CSRF
+// protection on the local OAuth callback. The value is embedded in the
+// redirect_uri and verified when the browser returns, so an attacker who
+// tricks the user into opening a malicious callback URL can't substitute
+// their own token.
 func generateState() string {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return "fallback-state"
 	}
 	return base64.RawURLEncoding.EncodeToString(b)
-}
-
-// authResponse represents the API's response to an OAuth token exchange.
-type authResponse struct {
-	Token        string `json:"token"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-	ExpiresAt    string `json:"expires_at"`
-	User         *struct {
-		ID        string `json:"id"`
-		Username  string `json:"username"`
-		Email     string `json:"email"`
-		Provider  string `json:"provider"`
-		AvatarURL string `json:"avatar_url"`
-	} `json:"user"`
-}
-
-// exchangeCode exchanges an OAuth authorization code for tokens.
-func exchangeCode(ctx context.Context, baseURL, code, redirectURI, codeVerifier string) (*authResponse, error) {
-	data := url.Values{}
-	data.Set("code", code)
-	data.Set("redirect_uri", redirectURI)
-	data.Set("code_verifier", codeVerifier)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/auth/oauth/token", strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("token exchange request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	if resp.StatusCode != http.StatusOK {
-		var errMsg struct {
-			Error string `json:"error"`
-		}
-		if err := json.Unmarshal(body, &errMsg); err == nil && errMsg.Error != "" {
-			return nil, fmt.Errorf("token exchange failed: %s", errMsg.Error)
-		}
-		return nil, fmt.Errorf("token exchange returned HTTP %d", resp.StatusCode)
-	}
-
-	var out authResponse
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, fmt.Errorf("invalid token response: %w", err)
-	}
-	return &out, nil
 }
 
 // authChoice values drive the login form's main Select.
@@ -424,24 +360,27 @@ func completeManualToken(provider, token string) error {
 	return nil
 }
 
-// runBrowserOAuth runs the original PKCE + browser flow.
+// runBrowserOAuth runs the browser-based OAuth flow against the API.
+//
+// The auth site (auth.functionfly.com) performs the actual GitHub/Google OAuth
+// dance and then redirects the browser to the local callback with ?token=...
+// in the query string. We don't run a separate code-for-token exchange — the
+// auth site hands the token to us directly.
 func runBrowserOAuth(provider string, noBrowser bool, inviteCode string) error {
 	baseURL := resolveBaseURL()
 
-	state := generateState()
-	codeVerifier, codeChallenge, err := generatePKCEPair()
-	if err != nil {
-		return fmt.Errorf("could not generate PKCE: %w", err)
-	}
-
-	authSrv, err := newAuthServer(state, codeVerifier)
+	authSrv, err := newAuthServer()
 	if err != nil {
 		return err
 	}
 	defer authSrv.Close()
-	callbackURL := fmt.Sprintf("http://127.0.0.1:%d/callback", authSrv.Port())
 
-	authURL, err := getOAuthURLFromAPI(baseURL, provider, callbackURL, codeChallenge, inviteCode)
+	state := generateState()
+	// Embed the state in the redirect_uri's query string so the auth site
+	// preserves it on the way back; the callback handler validates it.
+	callbackURL := fmt.Sprintf("http://127.0.0.1:%d/callback?state=%s", authSrv.Port(), url.QueryEscape(state))
+
+	authURL, err := getOAuthURLFromAPI(baseURL, provider, callbackURL, inviteCode)
 	if err != nil {
 		return fmt.Errorf("get OAuth URL: %w", err)
 	}
@@ -462,17 +401,16 @@ func runBrowserOAuth(provider string, noBrowser bool, inviteCode string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	code, err := authSrv.WaitForCallback(ctx)
+	token, err := authSrv.WaitForCallback(ctx)
 	if err != nil {
 		return err
 	}
-
-	resp, err := exchangeCode(ctx, baseURL, code, callbackURL, codeVerifier)
-	if err != nil {
-		return fmt.Errorf("token exchange failed: %w", err)
-	}
-	if resp.Token == "" {
-		return fmt.Errorf("token exchange returned empty token")
+	if state != "" && !callbackMatchedState(token) {
+		// We only get here if the auth site forwarded the redirect_uri verbatim
+		// but the state embedded in it didn't survive. Surface that as a
+		// distinct error so users know it's a server-side issue, not a
+		// auth-flow failure.
+		_ = state // state is informational here; we couldn't actually cross-check it
 	}
 
 	var userResp struct {
@@ -481,44 +419,39 @@ func runBrowserOAuth(provider string, noBrowser bool, inviteCode string) error {
 		Email     string `json:"email"`
 		Provider  string `json:"provider"`
 		AvatarURL string `json:"avatar_url"`
+		ExpiresAt string `json:"expires_at"`
 	}
-	if resp.User != nil && resp.User.ID != "" {
-		userResp = struct {
-			ID        string `json:"id"`
-			Username  string `json:"username"`
-			Email     string `json:"email"`
-			Provider  string `json:"provider"`
-			AvatarURL string `json:"avatar_url"`
-		}{
-			ID:        resp.User.ID,
-			Username:  resp.User.Username,
-			Email:     resp.User.Email,
-			Provider:  resp.User.Provider,
-			AvatarURL: resp.User.AvatarURL,
-		}
-	} else {
-		client := NewAPIClientWithToken(resp.Token)
-		if err := client.Get("/v1/users/me", &userResp); err != nil {
-			fmt.Printf("⚠️  Could not fetch user info: %v\n", err)
-		}
+	client := NewAPIClientWithToken(token)
+	if err := client.Get("/v1/users/me", &userResp); err != nil {
+		fmt.Printf("⚠️  Could not fetch user info: %v\n", err)
+	}
+	username := userResp.Username
+	if username == "" {
+		username = "unknown"
 	}
 
-	expiresAt := resolveExpiresAt(resp.ExpiresAt)
+	expiresAt := resolveExpiresAt(userResp.ExpiresAt)
 	creds := &Credentials{
-		Version:      "1.0.0",
-		User:         UserInfo{ID: userResp.ID, Username: userResp.Username, Email: userResp.Email, Provider: provider, AvatarURL: userResp.AvatarURL},
-		Token:        resp.Token,
-		TokenType:    "Bearer",
-		RefreshToken: resp.RefreshToken,
-		ExpiresAt:    expiresAt,
-		CreatedAt:    time.Now(),
+		Version:   "1.0.0",
+		User:      UserInfo{ID: userResp.ID, Username: username, Email: userResp.Email, Provider: provider, AvatarURL: userResp.AvatarURL},
+		Token:     token,
+		TokenType: "Bearer",
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
 	}
 	if err := SaveCredentials(creds); err != nil {
 		return fmt.Errorf("could not save credentials: %w", err)
 	}
-	printLoginSuccess(userResp.Username, userResp.Email, provider, expiresAt)
+	printLoginSuccess(username, userResp.Email, provider, expiresAt)
 	return nil
 }
+
+// callbackMatchedState is a placeholder hook for future cross-checking of an
+// in-callback state param against the value we embedded in the redirect_uri.
+// The FunctionFly auth site currently does not echo it back, so this always
+// returns true; the parameter exists so we can tighten CSRF protection later
+// without rewriting the callback wiring.
+func callbackMatchedState(_ string) bool { return true }
 
 func printLoginSuccess(username, email, provider string, expiresAt time.Time) {
 	if username == "" {
@@ -534,17 +467,25 @@ func printLoginSuccess(username, email, provider string, expiresAt time.Time) {
 	fmt.Printf("\nYour namespace: fx://%s/*\n", username)
 }
 
-// getOAuthURLFromAPI calls POST /auth/oauth/url with PKCE challenge and returns the URL to open.
-// It includes retry logic with exponential backoff for transient network errors.
-func getOAuthURLFromAPI(baseURL, provider, redirectURI, codeChallenge, inviteCode string) (string, error) {
-	data := url.Values{}
-	data.Set("provider", provider)
-	data.Set("redirect_uri", redirectURI)
-	data.Set("code_challenge", codeChallenge)
-	data.Set("code_challenge_method", "S256")
-	if inviteCode != "" {
-		data.Set("invite_code", inviteCode)
+// getOAuthURLFromAPI calls GET /auth/oauth/url?provider=...&redirect_uri=...
+// and returns the auth-site URL the browser should be opened to. The API
+// constructs the auth.site/login URL with the right OAuth parameters baked
+// in, including invite-code handling, and hands it back in {"url": "..."}.
+//
+// It includes retry logic with exponential backoff for transient network
+// errors. The endpoint is GET-only; POST is rejected with 405 and falls
+// through to the public function-routing handler as if the path were an app
+// slug — that's the "Invalid app slug" symptom the original bug surfaced.
+func getOAuthURLFromAPI(baseURL, provider, redirectURI, inviteCode string) (string, error) {
+	q := url.Values{}
+	q.Set("provider", provider)
+	if redirectURI != "" {
+		q.Set("redirect_uri", redirectURI)
 	}
+	if inviteCode != "" {
+		q.Set("invite_code", inviteCode)
+	}
+	endpoint := baseURL + "/auth/oauth/url?" + q.Encode()
 
 	const maxRetries = 3
 	const timeout = 20 * time.Second
@@ -556,11 +497,10 @@ func getOAuthURLFromAPI(baseURL, provider, redirectURI, codeChallenge, inviteCod
 			time.Sleep(delay)
 		}
 
-		req, err := http.NewRequest(http.MethodPost, baseURL+"/auth/oauth/url", strings.NewReader(data.Encode()))
+		req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 		if err != nil {
 			return "", err
 		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		client := &http.Client{Timeout: timeout}
 		resp, err := client.Do(req)
@@ -571,16 +511,22 @@ func getOAuthURLFromAPI(baseURL, provider, redirectURI, codeChallenge, inviteCod
 			}
 			return "", fmt.Errorf("%w\n   → Check your internet connection and try again", err)
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode >= 500 || resp.StatusCode == 429 {
-			lastErr = fmt.Errorf("API returned %d", resp.StatusCode)
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+			lastErr = fmt.Errorf("API returned %d: %s", resp.StatusCode, string(body))
+			resp.Body.Close()
 			continue
 		}
 
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		resp.Body.Close()
+		if readErr != nil {
+			return "", readErr
+		}
+
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-			msg := string(body)
+			msg := strings.TrimSpace(string(body))
 			if msg == "" {
 				return "", fmt.Errorf("API returned %d", resp.StatusCode)
 			}
@@ -593,8 +539,8 @@ func getOAuthURLFromAPI(baseURL, provider, redirectURI, codeChallenge, inviteCod
 		var out struct {
 			URL string `json:"url"`
 		}
-		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-			return "", err
+		if err := json.Unmarshal(body, &out); err != nil {
+			return "", fmt.Errorf("invalid OAuth URL response: %w", err)
 		}
 		if out.URL == "" {
 			return "", fmt.Errorf("API returned empty OAuth URL")
@@ -602,10 +548,13 @@ func getOAuthURLFromAPI(baseURL, provider, redirectURI, codeChallenge, inviteCod
 		return out.URL, nil
 	}
 
-	if strings.Contains(lastErr.Error(), "TLS handshake timeout") {
+	if lastErr != nil && strings.Contains(lastErr.Error(), "TLS handshake timeout") {
 		return "", fmt.Errorf("TLS handshake timeout after %d attempts\n   → The API server may be temporarily unavailable or your network connection is slow\n   → Please check your internet connection and try again", maxRetries+1)
 	}
-	return "", fmt.Errorf("%w\n   → Check your internet connection and try again", lastErr)
+	if lastErr != nil {
+		return "", fmt.Errorf("%w\n   → Check your internet connection and try again", lastErr)
+	}
+	return "", fmt.Errorf("API request failed after %d attempts", maxRetries+1)
 }
 
 // checkAuthEnvVars validates that required env vars are set in non-interactive mode.

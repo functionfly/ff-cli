@@ -227,8 +227,8 @@ func TestLoadManifest_JSONC_Comments(t *testing.T) {
 
 func TestLoadManifest_PrefersJSONCOverJSON(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.WriteFile(filepath.Join(tmpDir, "functionfly.jsonc"), []byte(`{"name":"jsonc-file","version":"1.0.0","runtime":"python3.11"}`), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "functionfly.json"), []byte(`{"name":"json-file","version":"1.0.0","runtime":"python3.11"}`), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "functionfly.jsonc"), []byte(`{"name":"jsonc-file","version":"1.0.0","runtime":"python3.11"}`), 0o644)
+	os.WriteFile(filepath.Join(tmpDir, "functionfly.json"), []byte(`{"name":"json-file","version":"1.0.0","runtime":"python3.11"}`), 0o644)
 
 	loaded, err := LoadManifest(tmpDir)
 	if err != nil {

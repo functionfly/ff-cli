@@ -1,10 +1,16 @@
 package commands
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestResolveAuthSiteURL_Default covers the unset case.
@@ -179,5 +185,166 @@ func TestRunLogin_TokenFlagShortCircuitNonInteractive(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "token") {
 		t.Errorf("expected error to mention token, got %v", err)
+	}
+}
+
+// TestGetOAuthURLFromAPI_UsesGetWithQueryParams is a regression test for the
+// "Invalid app slug" bug. The CLI used to POST form-encoded body to
+// /auth/oauth/url, but the API only registers that path as GET — the POST
+// fell through to the public function-routing handler (`/{appSlug}`) and
+// came back as 400 "Invalid app slug". The fix is GET with query params.
+func TestGetOAuthURLFromAPI_UsesGetWithQueryParams(t *testing.T) {
+	var (
+		gotMethod string
+		gotPath   string
+		gotQuery  url.Values
+		gotCT     string
+	)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotQuery = r.URL.Query()
+		gotCT = r.Header.Get("Content-Type")
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"url":"https://example.com/oauth?x=1"}`)
+	}))
+	defer srv.Close()
+
+	authURL, err := getOAuthURLFromAPI(
+		srv.URL, "github",
+		"http://127.0.0.1:9999/callback?state=abc", "invite-123",
+	)
+	if err != nil {
+		t.Fatalf("getOAuthURLFromAPI: %v", err)
+	}
+	if authURL != "https://example.com/oauth?x=1" {
+		t.Errorf("authURL = %q, want https://example.com/oauth?x=1", authURL)
+	}
+	if gotMethod != http.MethodGet {
+		t.Errorf("method = %q, want GET", gotMethod)
+	}
+	if gotPath != "/auth/oauth/url" {
+		t.Errorf("path = %q, want /auth/oauth/url", gotPath)
+	}
+	if gotCT != "" {
+		t.Errorf("Content-Type = %q, want empty (no form body on GET)", gotCT)
+	}
+	if got := gotQuery.Get("provider"); got != "github" {
+		t.Errorf("provider = %q, want github", got)
+	}
+	if got := gotQuery.Get("redirect_uri"); got != "http://127.0.0.1:9999/callback?state=abc" {
+		t.Errorf("redirect_uri = %q", got)
+	}
+	if got := gotQuery.Get("invite_code"); got != "invite-123" {
+		t.Errorf("invite_code = %q, want invite-123", got)
+	}
+	// Make sure we never reintroduce the old form-body fields.
+	for _, banned := range []string{"app_id", "app_slug", "code_challenge", "code_challenge_method"} {
+		if _, ok := gotQuery[banned]; ok {
+			t.Errorf("query should not contain %q", banned)
+		}
+	}
+}
+
+// TestGetOAuthURLFromAPI_OmitsInviteWhenEmpty covers the invite-less sign-in
+// path: the API rejects the empty string just as it does the missing field,
+// so we don't send it.
+func TestGetOAuthURLFromAPI_OmitsInviteWhenEmpty(t *testing.T) {
+	var gotQuery url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.Query()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"url":"https://example.com/oauth"}`)
+	}))
+	defer srv.Close()
+
+	if _, err := getOAuthURLFromAPI(srv.URL, "google", "", ""); err != nil {
+		t.Fatalf("getOAuthURLFromAPI: %v", err)
+	}
+	if _, ok := gotQuery["invite_code"]; ok {
+		t.Error("invite_code should be omitted when empty")
+	}
+	if got := gotQuery.Get("redirect_uri"); got != "" {
+		t.Errorf("redirect_uri = %q, want empty", got)
+	}
+}
+
+// TestGetOAuthURLFromAPI_InvitesHintError is a regression test for the
+// "invite code is required" response: the CLI surfaces it as a friendly
+// hint rather than a bare 400.
+func TestGetOAuthURLFromAPI_InvitesHintError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"message":"invite code is required to sign up with OAuth"}`)
+	}))
+	defer srv.Close()
+
+	_, err := getOAuthURLFromAPI(srv.URL, "github", "", "")
+	if err == nil {
+		t.Fatal("expected error for invite-required response")
+	}
+	if !strings.Contains(err.Error(), "invite-only") {
+		t.Errorf("error should mention invite-only, got: %v", err)
+	}
+}
+
+// TestAuthServer_DeliversToken covers the happy path of the local callback
+// server: a ?token=... hit resolves the WaitForCallback promise with the
+// token, with no separate exchange call.
+func TestAuthServer_DeliversToken(t *testing.T) {
+	srv, err := newAuthServer()
+	if err != nil {
+		t.Fatalf("newAuthServer: %v", err)
+	}
+	defer srv.Close()
+
+	callbackURL := fmt.Sprintf("http://127.0.0.1:%d/callback", srv.Port())
+
+	go func() {
+		// Simulate the auth site redirecting the browser to the callback.
+		resp, err := http.Get(callbackURL + "?token=ff_test_token_value")
+		if err != nil {
+			t.Errorf("callback GET: %v", err)
+			return
+		}
+		resp.Body.Close()
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	tok, err := srv.WaitForCallback(ctx)
+	if err != nil {
+		t.Fatalf("WaitForCallback: %v", err)
+	}
+	if tok != "ff_test_token_value" {
+		t.Errorf("token = %q, want ff_test_token_value", tok)
+	}
+}
+
+// TestAuthServer_SurfacesAuthError covers the failure path: when the auth
+// site redirects with ?error=... the callback surfaces that error instead
+// of silently succeeding with an empty token.
+func TestAuthServer_SurfacesAuthError(t *testing.T) {
+	srv, err := newAuthServer()
+	if err != nil {
+		t.Fatalf("newAuthServer: %v", err)
+	}
+	defer srv.Close()
+
+	callbackURL := fmt.Sprintf("http://127.0.0.1:%d/callback", srv.Port())
+
+	go func() {
+		_, _ = http.Get(callbackURL + "?error=access_denied&error_description=user+denied+the+request")
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if _, err := srv.WaitForCallback(ctx); err == nil {
+		t.Fatal("expected error from callback with ?error=access_denied")
+	} else if !strings.Contains(err.Error(), "user denied the request") {
+		t.Errorf("error should surface the auth-site error_description, got: %v", err)
 	}
 }
