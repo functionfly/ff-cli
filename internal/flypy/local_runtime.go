@@ -63,8 +63,8 @@ type LocalRuntimeConfig struct {
 	// VerifySignature, if true, requires signature.sig to verify against
 	// SignaturePublicKey. The default (false) is appropriate for local
 	// development; production should set this.
-	VerifySignature      bool
-	SignaturePublicKey   []byte
+	VerifySignature    bool
+	SignaturePublicKey []byte
 }
 
 // LocalRuntime provides a local execution environment for FlyPy functions.
@@ -104,8 +104,8 @@ type ipLimiter struct {
 const (
 	defaultMaxRequestBytes         int64         = 1 << 20 // 1 MiB
 	defaultMaxConcurrentExecutions               = 8
-	defaultPerIPRateLimit          rate.Limit   = 100
-	defaultPerIPRateBurst                       = 200
+	defaultPerIPRateLimit          rate.Limit    = 100
+	defaultPerIPRateBurst                        = 200
 	defaultExecutionTimeout        time.Duration = 30 * time.Second
 	limiterIdleTTL                               = 10 * time.Minute
 )
@@ -263,8 +263,8 @@ func (r *LocalRuntime) withMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		if r.config.AuthToken != "" {
 			tok := bearerToken(req)
 			if tok != r.config.AuthToken {
-			r.logRequest(req, w, http.StatusUnauthorized)
-			logrus.WithField("remote", req.RemoteAddr).Warn("auth rejected: invalid bearer token")
+				r.logRequest(req, w, http.StatusUnauthorized)
+				logrus.WithField("remote", req.RemoteAddr).Warn("auth rejected: invalid bearer token")
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}

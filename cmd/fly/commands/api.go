@@ -45,7 +45,7 @@ func NewAPIClient() (*APIClient, error) {
 			Transport: &http.Transport{
 				MaxIdleConns:        100,
 				MaxIdleConnsPerHost: 20,
-				IdleConnTimeout:    90 * time.Second,
+				IdleConnTimeout:     90 * time.Second,
 				TLSHandshakeTimeout: 10 * time.Second,
 			},
 		},
@@ -72,7 +72,7 @@ func NewAPIClientWithToken(token string) *APIClient {
 			Transport: &http.Transport{
 				MaxIdleConns:        100,
 				MaxIdleConnsPerHost: 20,
-				IdleConnTimeout:    90 * time.Second,
+				IdleConnTimeout:     90 * time.Second,
 				TLSHandshakeTimeout: 10 * time.Second,
 			},
 		},
