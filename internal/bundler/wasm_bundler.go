@@ -35,10 +35,13 @@ func BundleForWasmRuntimeWithWorkingDirectory(manifest *manifest.Manifest, worki
 
 		var bundleErr error
 		switch manifest.Runtime {
-		case "node18", "node20", "deno", "bun":
+		case "node18", "node20", "deno", "bun", "wasm":
 			result, bundleErr = bundleJSForWasmRuntime(manifest)
 		case "python3.11", "python3.12", "python":
 			result, bundleErr = bundlePythonForWasmRuntime(manifest)
+		case "go", "c", "kotlin", "ruby", "swift", "microvm", "prism":
+			// Native runtimes — package source for server-side compilation
+			result, bundleErr = bundleNative(manifest)
 		default:
 			result, bundleErr = bundleJSForWasmRuntime(manifest) // Default to JS
 		}

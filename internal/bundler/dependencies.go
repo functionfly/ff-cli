@@ -33,10 +33,24 @@ func InstallDependencies(manifest *manifest.Manifest) error {
 		return nil
 	case manifest.Runtime == "bun":
 		return installBunDependencies(manifest.Dependencies)
+	case manifest.Runtime == "go":
+		return installGoDependencies(manifest.Dependencies)
+	case manifest.Runtime == "ruby":
+		return installRubyDependencies(manifest.Dependencies)
+	case manifest.Runtime == "kotlin", manifest.Runtime == "c", manifest.Runtime == "swift", manifest.Runtime == "microvm":
+		// These runtimes handle dependencies server-side or via their own manifests
+		// (build.gradle, Makefile, Package.swift, Dockerfile)
+		return nil
+	case manifest.Runtime == "wasm":
+		// WASM — no runtime dependencies needed
+		return nil
+	case manifest.Runtime == "prism":
+		// Prism — managed runtime, dependencies resolved server-side
+		return nil
 	default:
 		return &RuntimeNotSupportedError{
 			Runtime:   manifest.Runtime,
-			Supported: []string{"node18", "node20", "python3.11", "deno", "bun"},
+			Supported: []string{"node18", "node20", "python3.11", "deno", "bun", "go", "ruby", "kotlin", "c", "swift", "microvm", "wasm", "prism"},
 		}
 	}
 }
@@ -386,4 +400,50 @@ func needsBunInstall(deps map[string]string) bool {
 
 	// If package.json is newer than bun.lockb, reinstall
 	return packageStat.ModTime().After(lockStat.ModTime())
+}
+
+// installGoDependencies installs Go dependencies using go mod
+func installGoDependencies(deps map[string]string) error {
+	if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
+		if err := runCommand("go", "mod", "init", "functionfly-function"); err != nil {
+			return NewBundlerErrorWithCause("go mod init", "failed to initialise go module", err)
+		}
+	}
+	for pkg, version := range deps {
+		spec := pkg
+		if version != "" && version != "*" {
+			spec = pkg + "@" + version
+		}
+		if err := runCommand("go", "get", spec); err != nil {
+			return NewDependencyErrorWithCause("go get", pkg, "go get failed", err)
+		}
+	}
+	if err := runCommand("go", "mod", "tidy"); err != nil {
+		return NewBundlerErrorWithCause("go mod tidy", "failed to tidy go modules", err)
+	}
+	fmt.Println("✓ go dependencies installed")
+	return nil
+}
+
+// installRubyDependencies installs Ruby dependencies using bundler or gem
+func installRubyDependencies(deps map[string]string) error {
+	if _, err := os.Stat("Gemfile"); err == nil {
+		if err := runCommand("bundle", "install"); err != nil {
+			return NewDependencyErrorWithCause("bundle install", "all", "bundle install failed", err)
+		}
+		fmt.Println("✓ ruby dependencies installed")
+		return nil
+	}
+	for pkg, version := range deps {
+		args := []string{"install", "--no-document"}
+		if version != "" && version != "*" {
+			args = append(args, "-v", version)
+		}
+		args = append(args, pkg)
+		if err := runCommand("gem", args...); err != nil {
+			return NewDependencyErrorWithCause("gem install", pkg, "gem install failed", err)
+		}
+	}
+	fmt.Println("✓ ruby dependencies installed")
+	return nil
 }

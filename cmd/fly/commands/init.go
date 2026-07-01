@@ -30,7 +30,7 @@ func NewInitCmd() *cobra.Command {
 			return runInit(name, template, force)
 		},
 	}
-	cmd.Flags().StringVarP(&template, "template", "t", "hello-world", "Template (hello-world, http-api, cron-job, webhook, python, typescript, javascript)")
+	cmd.Flags().StringVarP(&template, "template", "t", "hello-world", "Template (hello-world, http-api, cron-job, webhook, python, typescript, javascript, go, ruby, swift, kotlin, c)")
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Overwrite existing files")
 	return cmd
 }
@@ -115,7 +115,7 @@ func isValidFunctionName(name string) bool {
 
 // validTemplateList returns the supported --template values in display order.
 func validTemplateList() []string {
-	return []string{"hello-world", "http-api", "cron-job", "webhook", "python", "typescript", "javascript"}
+	return []string{"hello-world", "http-api", "cron-job", "webhook", "python", "typescript", "javascript", "go", "ruby", "swift", "kotlin", "c"}
 }
 
 // isValidTemplate reports whether t is a recognized --template value.
@@ -175,6 +175,16 @@ func runtimeForTemplate(template string) string {
 		return "node20"
 	case "python":
 		return "python3.11"
+	case "go":
+		return "go"
+	case "ruby":
+		return "ruby"
+	case "swift":
+		return "swift"
+	case "kotlin":
+		return "kotlin"
+	case "c":
+		return "c"
 	default:
 		return "python3.11"
 	}

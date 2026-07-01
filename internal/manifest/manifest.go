@@ -147,7 +147,7 @@ func generateJSONCWithComments(m *Manifest) string {
 `, m.Version))
 
 	// runtime - required
-	sb.WriteString(`  // Runtime: node18, node20, python3.11, python3.12, deno
+	sb.WriteString(`  // Runtime: node18, node20, python3.11, deno, bun, rust, wasm, prism, go, c, kotlin, ruby, swift, microvm
 `)
 	sb.WriteString(fmt.Sprintf(`  "runtime": "%s",
 `, m.Runtime))
@@ -310,9 +310,17 @@ func (m *Manifest) Validate() error {
 		"bun":          true,
 		"rust":         true,
 		"browser-wasm": true, // Browser Native WebAssembly (0ms cold start)
+		"wasm":         true, // Alias for browser-wasm
+		"prism":        true, // FunctionFly Prism managed runtime
+		"go":           true,
+		"c":            true,
+		"kotlin":       true,
+		"ruby":         true,
+		"swift":        true,
+		"microvm":      true,
 	}
 	if !validRuntimes[m.Runtime] {
-		return fmt.Errorf("runtime must be one of: node18, node20, python3.11, deno, bun, rust, browser-wasm")
+		return fmt.Errorf("runtime must be one of: node18, node20, python3.11, deno, bun, rust, browser-wasm, wasm, prism, go, c, kotlin, ruby, swift, microvm")
 	}
 
 	// Entry file validation (if provided)
@@ -333,6 +341,14 @@ func (m *Manifest) Validate() error {
 			"bun":          {".js", ".ts"},
 			"rust":         {".rs"},
 			"browser-wasm": {".wasm", ".wat"},
+			"wasm":         {".wasm", ".wat"},
+			"prism":        {".js", ".ts", ".py", ".go", ".rs", ".wasm"},
+			"go":           {".go"},
+			"c":            {".c"},
+			"kotlin":       {".kt", ".kts"},
+			"ruby":         {".rb"},
+			"swift":        {".swift"},
+			"microvm":      {".tar", ".squashfs", ".img"},
 		}
 		ext := filepath.Ext(m.Entry)
 		if validExts, ok := validExtensions[m.Runtime]; ok {

@@ -56,6 +56,22 @@ func getEntryFileCandidates(runtime string) (preferred string, alternatives []st
 		return "main.ts", []string{"index.ts", "main.js", "index.js"}
 	case "python3.11":
 		return "main.py", []string{"index.py", "app.py", "__main__.py"}
+	case "go":
+		return "main.go", []string{"handler.go", "index.go"}
+	case "c":
+		return "main.c", []string{"index.c", "handler.c"}
+	case "kotlin":
+		return "Main.kt", []string{"main.kt", "Handler.kt", "App.kt"}
+	case "ruby":
+		return "main.rb", []string{"index.rb", "app.rb", "handler.rb"}
+	case "swift":
+		return "main.swift", []string{"Sources/main.swift", "Handler.swift", "App.swift"}
+	case "microvm":
+		return "rootfs.tar", []string{"rootfs.squashfs", "rootfs.img", "Dockerfile"}
+	case "wasm":
+		return "index.wasm", []string{"main.wasm", "index.wat", "main.wat"}
+	case "prism":
+		return "index.js", []string{"main.js", "index.ts", "main.ts", "main.py", "handler.go"}
 	default: // node18, node20, and other JS runtimes
 		return "index.js", []string{"index.ts", "main.js", "main.ts"}
 	}

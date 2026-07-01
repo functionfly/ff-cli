@@ -31,6 +31,25 @@ Go from idea → global API in under 60 seconds.
   ff rollback           Roll back to a previous version
   ff env                Manage environment variables
   ff secrets            Manage secrets
+  ff vault              Manage the encrypted secrets vault
+  ff function info      Detailed function information
+  ff diff               Compare local vs deployed state
+  ff exec-history       View past function executions
+  ff analytics          Rich analytics beyond basic stats
+  ff notify             Webhook and notification management
+  ff dna                View function DNA, mutations, variants
+  ff time-machine       Replay and inspect past function states
+  ff embed              Generate SDK snippets for a function
+  ff trust              View trust scores and verify integrity
+  ff state              Manage function state fabric
+  ff billing            Manage billing and plan
+  ff user               Manage user profile
+  ff api-keys           Manage API keys for CI/CD
+  ff apps               Manage applications
+  ff run                Execute a deployed function
+  ff search             Search the public function registry
+  ff list               List deployed functions
+  ff delete             Delete a deployed function
   ff whoami             Show current logged-in user
   ff logout             Clear stored credentials
   ff completion         Generate shell completion scripts`,
@@ -75,20 +94,39 @@ Go from idea → global API in under 60 seconds.
 		NewManifestCmd(),
 		NewTestCmd(),
 		NewUpdateCmd(),
+		NewListCmd(),
+		NewDeleteCmd(),
+		NewSearchCmd(),
+		NewRunCmd(),
+		NewEmbedCmd(),
+		NewDNACmd(),
+		NewTimeMachineCmd(),
+		NewExecHistoryCmd(),
+		NewDiffCmd(),
+		NewTrustCmd(),
 		NewStatsCmd(),
+		NewAnalyticsCmd(),
 		NewLogsCmd(),
 		NewRollbackCmd(),
 		NewHealthCmd(),
 		NewCanaryCmd(),
 		NewEnvCmd(),
 		NewSecretsCmd(),
+		NewVaultCmd(),
 		NewScheduleCmd(),
+		NotifyCmd(),
 		NewDreCmd(),
 		NewCompletionCmd(root),
 		NewCompletionsAliasCmd(root),
 		NewDoctorCmd(),
 		NewChangelogCmd(),
 		BackendCmd(),
+		AppsCmd(),
+		APIKeysCmd(),
+		FunctionCmd(),
+		StateCmd(),
+		BillingCmd(),
+		UserCmd(),
 		FlypyCmd(),
 		CompileCmd(),
 	)

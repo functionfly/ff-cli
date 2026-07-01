@@ -4,12 +4,12 @@ Thanks for your interest in contributing to `ff-cli`! This guide covers everythi
 
 ## Prerequisites
 
-- Go 1.22 or later
+- Go 1.25 or later
 - Git
 - golangci-lint (for linting)
 
 Optional (for integration tests):
-- Rust toolchain with `wasm32-wasi` target
+- Rust toolchain with `wasm32-wasip1` target
 - Node.js / npm
 
 ## Getting Started
@@ -18,20 +18,20 @@ Optional (for integration tests):
 git clone https://github.com/functionfly/ff-cli.git
 cd ff-cli
 go mod download
-go build ./cmd/ff
+make build
 ```
 
 Run the binary:
 
 ```bash
-./ff --help
+./bin/ff --help
 ```
 
 ## Running Tests
 
 ```bash
 # Unit tests (fast, CI runs these)
-go test -timeout 60s ./...
+make test
 
 # Integration tests (slower, requires Rust/npm)
 go test -v -timeout 600s -tags integration ./...
@@ -40,7 +40,7 @@ go test -v -timeout 600s -tags integration ./...
 ## Linting
 
 ```bash
-golangci-lint run --timeout=5m
+make lint
 ```
 
 The CI runs the same lint check on every PR.
@@ -56,6 +56,14 @@ cmd/fly/
     credentials.go   Keychain + file credential storage
     config.go        Global CLI config (~/.ff/)
     errors.go        Error types + exit codes
+    deploy.go        Deploy with env management
+    env.go           Env vars with apply/import
+    logs.go          Logs with level/request-id filtering
+    state.go         Function state KV store
+    apps.go          Application management
+    api_keys.go      API key management
+    billing.go       Billing and plan management
+    vault*.go        Vault secrets management (9 files)
     ...
 internal/
   cli/               Shared HTTP client + types
@@ -64,6 +72,7 @@ internal/
   version/           Build version injection
   bundler/           TypeScript/JS bundler
   flypy/             FlyPy Python-to-Wasm compiler
+  telemetry/         Telemetry and event tracking
 ```
 
 ## Adding a New Command
@@ -72,7 +81,7 @@ internal/
 2. Define a `NewMyCmd() *cobra.Command` function.
 3. Register it in `root.go` inside `NewRootCmd()`.
 4. Add tests in `mycommand_test.go`.
-5. Run `go vet ./cmd/fly/commands/` and `go test`.
+5. Run `make vet` and `make test`.
 
 ## Code Style
 
@@ -107,8 +116,8 @@ This drives the automated changelog in GoReleaser releases.
 Releases are automated via GitHub Actions + GoReleaser when a `v*.*.*` tag is pushed:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 The release workflow builds binaries for linux/darwin/windows (amd64/arm64), creates Homebrew formula, deb/rpm/apk packages, and publishes a GitHub release.

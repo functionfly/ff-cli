@@ -5,13 +5,11 @@ The `ff` CLI is the primary developer interface for FunctionFly.
 ## Install and upgrade
 
 - **Install script (Linux/macOS):**  
-  `curl -fsSL https://raw.githubusercontent.com/functionfly/functionfly/main/scripts/install.sh | bash`
+  `curl -fsSL https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.sh | bash`
 - **Homebrew:** `brew tap functionfly/tap && brew install ff` (when tap is configured)
-- **From source:** `go build -o bin/ff ./cmd/ff` (binary at `bin/ff`)
+- **From source:** `make build` (binary at `bin/ff`)
 
 Upgrade: run the install script again with `VERSION=latest`, or `brew upgrade ff` / `scoop update ff` / `choco upgrade ff`. Or run `ff self-update` to print instructions.
-
-See [packaging/README.md](../../packaging/README.md) for Windows and release artifacts.
 
 ## Quick Start
 
@@ -49,6 +47,8 @@ Credentials (after login) are stored in `~/.ff/credentials.json`.
 
 ## Commands
 
+### Core
+
 | Command | Description |
 |---------|-------------|
 | `ff login` | OAuth login (GitHub or Google) |
@@ -62,13 +62,70 @@ Credentials (after login) are stored in `~/.ff/credentials.json`.
 | `ff publish --build` | Build then publish |
 | `ff test` | Test deployed function |
 | `ff update patch` | Bump function version (patch/minor/major) |
+| `ff rollback` | Roll back to previous version |
+
+### Deployment
+
+| Command | Description |
+|---------|-------------|
+| `ff deploy --env production` | Publish and set as production |
+| `ff deploy --env staging` | Publish and set as staging |
+| `ff deploy --promote staging→prod` | Promote staging version to production |
+| `ff deploy --canary 10` | Publish and start canary at 10% traffic |
+| `ff canary` | Manage canary deployments |
+| `ff health` | Check deployed function health |
 | `ff stats` | View usage statistics |
+| `ff analytics` | Rich analytics with period comparison |
+| `ff exec-history` | View past function executions |
 | `ff logs` | View recent logs |
 | `ff logs --follow` | Stream live logs |
-| `ff rollback` | Roll back to previous version |
+| `ff logs --level error` | Filter by log level |
+| `ff logs --request-id abc` | Filter by request ID |
+
+### Function Management
+
+| Command | Description |
+|---------|-------------|
+| `ff list` | List deployed functions |
+| `ff search [query]` | Search the public function registry |
+| `ff run <author/name>` | Execute a deployed function |
+| `ff delete <author/name>` | Delete a deployed function |
+| `ff diff` | Compare local vs deployed state |
+| `ff function info` | Detailed function information |
+| `ff embed` | Generate SDK code snippets |
+| `ff dna` | View function DNA, mutations, variants |
+| `ff trust` | View trust scores and verify integrity |
+| `ff time-machine` | Replay and inspect past states |
+
+### Configuration & Secrets
+
+| Command | Description |
+|---------|-------------|
 | `ff env list/set/get/unset` | Manage environment variables |
+| `ff env apply` | Set env vars from a .env file |
+| `ff env import` | Import env vars from JSON/shell format |
 | `ff secrets list/set/unset` | Manage secrets |
+| `ff state list/get/set/delete` | Manage function state KV store |
+| `ff schedule` | Manage scheduled executions |
+| `ff vault` | Manage the encrypted secrets vault |
+
+### Account & Billing
+
+| Command | Description |
+|---------|-------------|
+| `ff user show/update/settings` | Manage user profile |
+| `ff billing show/upgrade/usage` | Manage billing and plan |
+| `ff apps list/create/get/delete` | Manage applications |
+| `ff api-keys list/create/rotate/revoke` | Manage API keys |
+| `ff notify list/create/delete/test` | Manage webhook notifications |
+
+### Utilities
+
+| Command | Description |
+|---------|-------------|
 | `ff completion bash/zsh/fish/powershell` | Shell completion |
+| `ff doctor` | Run environment diagnostics |
+| `ff changelog` | Show the CLI changelog |
 
 ## JSON Output
 
@@ -79,3 +136,14 @@ ff publish --json
 ff stats --json
 ff whoami --json
 ```
+
+## Global Flags
+
+| Flag | Description |
+|------|-------------|
+| `--debug` | Enable full debug output |
+| `--verbose` / `-v` | Enable verbose API calls |
+| `--trace` | Enable HTTP trace with request/response bodies |
+| `--format` / `-m` | Output format: `table`, `json` (default: `table`) |
+| `--yes` / `-y` | Skip confirmation prompts |
+| `--version` | Show CLI version |

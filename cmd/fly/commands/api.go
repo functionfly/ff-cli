@@ -235,6 +235,42 @@ func (c *APIClient) do(req *http.Request, out interface{}) error {
 	return lastErr
 }
 
+// GetRaw performs a GET request and returns the raw HTTP response.
+func (c *APIClient) GetRaw(path string) (*http.Response, error) {
+	fullURL, err := c.joinPath(path)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("GET", fullURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	if c.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	req.Header.Set("User-Agent", "ff-cli/"+version.Short())
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("network error: %w", err)
+	}
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
+		_ = resp.Body.Close()
+		return nil, c.buildError(resp.StatusCode, body)
+	}
+	return resp, nil
+}
+
+// readWithLimit reads up to limit bytes from r.
+func readWithLimit(r io.Reader, limit int64) ([]byte, error) {
+	return io.ReadAll(io.LimitReader(r, limit))
+}
+
+// copyWithLimit copies up to limit bytes from src to dst.
+func copyWithLimit(dst io.Writer, src io.Reader, limit int64) (int64, error) {
+	return io.Copy(dst, io.LimitReader(src, limit))
+}
+
 func (c *APIClient) buildError(statusCode int, body []byte) error {
 	var errResp struct {
 		Error   string `json:"error"`

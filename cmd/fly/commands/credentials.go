@@ -39,6 +39,7 @@ type UserInfo struct {
 	Email     string `json:"email"`
 	Provider  string `json:"provider"`
 	AvatarURL string `json:"avatar_url,omitempty"`
+	Plan      string `json:"plan,omitempty"`
 }
 
 func credentialsPath() (string, error) {

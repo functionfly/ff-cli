@@ -16,21 +16,27 @@ func NewLogsCmd() *cobra.Command {
 	var follow bool
 	var tail int
 	var since string
+	var until string
 	var asJSON bool
 	var level string
+	var requestID string
+	var function string
 	cmd := &cobra.Command{
 		Use:     "logs [author/name]",
 		Short:   "Stream live execution logs",
-		Example: "  ff logs\n  ff logs alice/my-fn\n  ff logs --follow\n  ff logs --tail 100\n  ff logs --level error\n  ff logs --json",
+		Example: "  ff logs\n  ff logs alice/my-fn\n  ff logs --follow\n  ff logs --tail 100\n  ff logs --level error\n  ff logs --request-id abc123\n  ff logs --since 1h --until 30m\n  ff logs --json",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runLogs(args, follow, tail, since, level, asJSON)
+			return runLogs(args, follow, tail, since, until, level, requestID, function, asJSON)
 		},
 	}
 	cmd.Flags().BoolVarP(&follow, "follow", "f", false, "Stream logs in real-time")
 	cmd.Flags().IntVar(&tail, "tail", 50, "Number of recent log lines to show")
-	cmd.Flags().StringVar(&since, "since", "", "Show logs since duration (e.g. 1h, 30m)")
+	cmd.Flags().StringVar(&since, "since", "", "Show logs since duration (e.g. 1h, 30m, 2d)")
+	cmd.Flags().StringVar(&until, "until", "", "Show logs until duration ago (e.g. 30m, 1h)")
 	cmd.Flags().StringVar(&level, "level", "", "Filter by log level (info, warn, error)")
+	cmd.Flags().StringVarP(&requestID, "request-id", "r", "", "Filter by request ID")
+	cmd.Flags().StringVarP(&function, "function", "F", "", "Filter by function (author/name)")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output logs as JSON")
 	return cmd
 }
@@ -46,10 +52,25 @@ type LogEntry struct {
 	Cached     bool      `json:"cached,omitempty"`
 }
 
-func runLogs(args []string, follow bool, tail int, since, level string, asJSON bool) error {
+func runLogs(args []string, follow bool, tail int, since, until, level, requestID, function string, asJSON bool) error {
 	author, name, err := resolveAuthorName(args)
 	if err != nil {
-		return err
+		// If no positional arg but --function provided, parse that
+		if function != "" {
+			parts := splitAuthorName(function)
+			if len(parts) == 2 {
+				author, name = parts[0], parts[1]
+				err = nil
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	if follow {
+		if err := requireVaultPlan(FeatureLiveLogs); err != nil {
+			return err
+		}
 	}
 	client, err := NewAPIClient()
 	if err != nil {
@@ -66,8 +87,14 @@ func runLogs(args []string, follow bool, tail int, since, level string, asJSON b
 	if since != "" {
 		params = append(params, "since="+since)
 	}
+	if until != "" {
+		params = append(params, "until="+until)
+	}
 	if level != "" {
 		params = append(params, "level="+level)
+	}
+	if requestID != "" {
+		params = append(params, "request_id="+requestID)
 	}
 	path := fmt.Sprintf("/v1/registry/%s/%s/logs?%s", author, name, strings.Join(params, "&"))
 	if follow {
@@ -146,6 +173,13 @@ func printLogEntry(entry LogEntry, asJSON bool) {
 		}
 	}
 	extras := ""
+	if entry.RequestID != "" {
+		short := entry.RequestID
+		if len(short) > 8 {
+			short = short[:8]
+		}
+		extras += fmt.Sprintf(" [%s]", short)
+	}
 	if entry.LatencyMs > 0 {
 		extras += fmt.Sprintf(" %dms", entry.LatencyMs)
 	}
@@ -153,7 +187,7 @@ func printLogEntry(entry LogEntry, asJSON bool) {
 		extras += fmt.Sprintf(" HTTP/%d", entry.StatusCode)
 	}
 	if entry.Region != "" {
-		extras += fmt.Sprintf(" [%s]", entry.Region)
+		extras += fmt.Sprintf(" {%s}", entry.Region)
 	}
 	if entry.Cached {
 		extras += " (cached)"

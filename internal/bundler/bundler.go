@@ -37,10 +37,20 @@ func BundleWithOptions(manifest *manifest.Manifest, options *BundleOptions) ([]b
 		return bundlePython(manifest)
 	case "typescript-wasm":
 		return bundleTypeScriptWASM(manifest)
+	case "go", "c", "kotlin", "ruby", "swift", "microvm":
+		// These runtimes compile natively on the platform — no client-side
+		// bundling needed. The source is uploaded as-is and compiled server-side.
+		return bundleNative(manifest)
+	case "wasm":
+		// Alias for browser-wasm — compile to WASM
+		return bundleWasmAlias(manifest)
+	case "prism":
+		// Prism is a polyglot managed runtime — upload source as-is
+		return bundleNative(manifest)
 	default:
 		return nil, &RuntimeNotSupportedError{
 			Runtime:   manifest.Runtime,
-			Supported: []string{"node18", "node20", "deno", "bun", "python3.11", "typescript-wasm"},
+			Supported: []string{"node18", "node20", "deno", "bun", "python3.11", "typescript-wasm", "wasm", "prism", "go", "c", "kotlin", "ruby", "swift", "microvm"},
 		}
 	}
 }
@@ -75,4 +85,9 @@ func BundleWithOptionsAndWorkingDirectory(manifest *manifest.Manifest, options *
 	})
 
 	return result, err
+}
+
+// bundleWasmAlias handles the "wasm" runtime, which is an alias for "browser-wasm".
+func bundleWasmAlias(m *manifest.Manifest) ([]byte, error) {
+	return BundleForWasmRuntime(m)
 }

@@ -46,7 +46,7 @@ func (v *Validator) ValidateManifest() ValidationResult {
 	}
 
 	// Check for valid runtime
-	validRuntimes := []string{"node", "python", "go", "generic"}
+	validRuntimes := []string{"node", "python", "go", "generic", "ruby", "swift", "kotlin", "c", "microvm", "wasm", "prism"}
 	isValidRuntime := false
 	for _, runtime := range validRuntimes {
 		if v.manifest.Runtime == runtime {

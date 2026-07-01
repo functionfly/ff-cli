@@ -58,7 +58,7 @@ Your function is now live at `https://api.functionfly.com/fx/<you>/slugify`.
 
 | Command | Description |
 |---------|-------------|
-| `ff login` | Authenticate with FunctionFly |
+| `ff login` | Authenticate with FunctionFly (OAuth) |
 | `ff logout` | Clear stored credentials |
 | `ff whoami` | Show the current authenticated user |
 | `ff init <name>` | Scaffold a new function project |
@@ -73,20 +73,49 @@ Your function is now live at `https://api.functionfly.com/fx/<you>/slugify`.
 
 | Command | Description |
 |---------|-------------|
-| `ff deploy` | Publish and promote to staging/production or start canary |
+| `ff deploy` | Publish and promote to any environment (`--env`, `--canary`, `--promote`, `--env-file`) |
 | `ff canary` | Manage canary deployments (`start`, `status`, `promote`, `rollback`, `cancel`, `history`) |
 | `ff health` | Check deployed function health (supports `--watch`) |
-| `ff logs` | Stream live execution logs |
+| `ff logs` | Stream live execution logs (`--follow`, `--level`, `--request-id`, `--since`) |
 | `ff stats` | View invocation stats |
+| `ff analytics` | Rich analytics with period comparison and dimension breakdown |
+| `ff exec-history` | View past function executions with status filtering |
+
+### Function Management
+
+| Command | Description |
+|---------|-------------|
+| `ff list` | List deployed functions (`--all`) |
+| `ff search [query]` | Search the public function registry (`--runtime`, `--limit`) |
+| `ff run <author/name>` | Execute a deployed function (`--input`, `--file`, `--method`, `--header`) |
+| `ff delete <author/name>` | Delete a deployed function |
+| `ff diff` | Compare local vs deployed state (`--env`) |
+| `ff function info` | Detailed function information |
+| `ff embed` | Generate SDK code snippets (`--lang`, `--method`) |
+| `ff dna` | View function DNA, mutations, and variants |
+| `ff trust` | View trust scores and verify integrity |
+| `ff time-machine` | Replay and inspect past function states (`list`, `replay`, `diff`, `inspect`) |
 
 ### Configuration & Secrets
 
 | Command | Description |
 |---------|-------------|
 | `ff config` | Show/edit CLI configuration |
-| `ff env` | Manage environment variables (`list`, `set`, `get`, `unset`) |
-| `ff secrets` | Manage secrets (`list`, `set`, `unset`) |
+| `ff env` | Manage environment variables (`list`, `set`, `get`, `unset`, `apply`, `import`) |
+| `ff secrets` | Manage per-function secrets (`list`, `set`, `unset`) |
+| `ff vault` | Manage the encrypted secrets vault (see below) |
+| `ff state` | Manage function state KV store (`list`, `get`, `set`, `delete`, `clear`, `export`, `import`) |
 | `ff schedule` | Manage scheduled function executions (`set`, `list`, `get`, `remove`, `presets`, `trigger`) |
+
+### Account & Billing
+
+| Command | Description |
+|---------|-------------|
+| `ff user` | Manage user profile (`show`, `update`, `settings`) |
+| `ff billing` | Manage billing and plan (`show`, `upgrade`, `downgrade`, `usage`) |
+| `ff apps` | Manage applications (`list`, `create`, `get`, `update`, `delete`) |
+| `ff api-keys` | Manage API keys for CI/CD (`list`, `create`, `rotate`, `revoke`) |
+| `ff notify` | Manage webhook notifications (`list`, `create`, `update`, `delete`, `test`) |
 
 ### Advanced
 
@@ -107,14 +136,59 @@ Your function is now live at `https://api.functionfly.com/fx/<you>/slugify`.
 | `ff self-update` | Update the CLI itself |
 | `ff changelog` | Show the CLI changelog |
 
+### Vault
+
+The `ff vault` command provides access to the FunctionFly encrypted secrets vault — a zero-knowledge, client-side encrypted secrets management system with enterprise features.
+
+| Command | Description |
+|---------|-------------|
+| `ff vault secrets` | Manage vault secrets (`list`, `create`, `get`, `update`, `delete`, `rotate`, `bulk-delete`, `export`) |
+| `ff vault tokens` | Manage access tokens (`create`, `list`, `revoke`) |
+| `ff vault versions` | Manage secret versions (`list`, `get`, `diff`, `rollback`) |
+| `ff vault audit` | Query audit logs (`list`, `export`) |
+| `ff vault namespaces` | Organize secrets into namespaces (`list`, `create`, `delete`) |
+| `ff vault dynamic` | Dynamic secrets — on-demand database credentials (`targets`, `credentials`, `leases`) |
+| `ff vault shares` | Cross-tenant secret sharing (`create`, `list`, `revoke`) |
+| `ff vault rbac` | Role-based access control (`roles`, `assignments`, `assign`, `unassign`) |
+| `ff vault config` | Security configuration (`mfa`, `sso`, `break-glass`, `escrow`, `cache`) |
+
 ### Global flags
 
 All commands support:
 - `--debug` — Enable full debug output
 - `--verbose` / `-v` — Enable verbose API calls
 - `--trace` — Enable HTTP trace with request/response bodies
-- `--format` / `-o` — Output format: `table`, `json` (default: `table`)
+- `--format` / `-m` — Output format: `table`, `json` (default: `table`)
+- `--yes` / `-y` — Skip confirmation prompts
 - `--version` — Show CLI version
+
+---
+
+## Plan tiers
+
+Certain features require a paid plan. The CLI checks your plan locally and shows a clear upgrade message if you try to access a feature above your tier. Run `ff whoami` to see your current plan.
+
+| Feature | Free | Starter ($24/mo) | Professional ($79/mo) | Enterprise ($299/mo) |
+|---------|------|-------------------|-----------------------|----------------------|
+| Publish, deploy, test, logs (fetch), env, secrets | ✅ | ✅ | ✅ | ✅ |
+| Scheduled executions (`ff schedule set`) | — | ✅ | ✅ | ✅ |
+| Live log streaming (`ff logs --follow`) | — | ✅ | ✅ | ✅ |
+| Canary deployments (`ff canary`) | — | — | ✅ | ✅ |
+| Vault namespaces, MFA, break-glass, audit export | — | — | ✅ | ✅ |
+| Vault RBAC, shares, escrow, SIEM webhooks | — | — | — | ✅ |
+| Vault SSO | — | — | — | — (Agent Enterprise) |
+
+Numeric limits per plan:
+
+| Resource | Free | Starter | Professional | Enterprise |
+|----------|------|---------|--------------|------------|
+| Apps | 1 | 3 | 10 | Unlimited |
+| Functions | 3 | 5 | 25 | Unlimited |
+| Requests/month | 25K | 250K | 2.5M | 25M |
+| Vault secrets | 25 | 500 | 5,000 | 1,000,000 |
+| Tokens per secret | 5 | 25 | 100 | 1,000 |
+
+Upgrade at [functionfly.com/billing](https://functionfly.com/billing).
 
 ---
 
@@ -163,30 +237,27 @@ The function manifest uses JSONC format (JSON with comments):
 
 ## Development
 
-**Requirements:** Go ≥ 1.24
+**Requirements:** Go ≥ 1.25
 
 ```bash
-# Clone`
-git clone https://github.com/functionfly/ff-cli`.git
-cd fly
+# Clone
+git clone https://github.com/functionfly/ff-cli.git
+cd ff-cli
 
 # Build
-go build -o ff ./cmd/ff
+make build
 
 # Test
-go test ./...
-
-# Test with race detector
-go test -race ./...
-
-# Integration tests (requires Rust toolchain with wasm32-wasi target)
-go test -tags integration ./...
+make test
 
 # Lint
-golangci-lint run
+make lint
+
+# Security
+make security
 
 # Run locally (no install)
-./ff --help
+./bin/ff --help
 ```
 
 ### Project structure
@@ -199,6 +270,7 @@ internal/
 ├── credentials/   # Credential persistence (OS keychain)
 ├── flypy/         # FlyPy Python-to-Wasm compiler
 ├── manifest/      # functionfly.jsonc parser
+├── telemetry/     # Telemetry and event tracking
 ├── testing/       # Test runner and validator
 ├── version/       # Build version injection
 └── watcher/       # File watcher for hot reload
@@ -210,8 +282,8 @@ scripts/           # Install scripts (bash, PowerShell)
 Tags trigger the GoReleaser workflow automatically:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 GoReleaser produces:

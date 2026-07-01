@@ -137,6 +137,9 @@ func runScheduleSet(cronExpr, preset, timezone string, runOnDeploy bool) error {
 	if err != nil {
 		return err
 	}
+	if err := requireVaultPlan(FeatureSchedule); err != nil {
+		return err
+	}
 	manifest, err := LoadManifest("")
 	if err != nil {
 		return err
@@ -379,6 +382,9 @@ func runSchedulePresets(asJSON bool) error {
 func runScheduleTrigger() error {
 	creds, err := requireAuth()
 	if err != nil {
+		return err
+	}
+	if err := requireVaultPlan(FeatureSchedule); err != nil {
 		return err
 	}
 	manifest, err := LoadManifest("")

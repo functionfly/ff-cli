@@ -47,6 +47,7 @@ func runWhoami(asJSON, verify bool) error {
 			"username":   creds.User.Username,
 			"email":      creds.User.Email,
 			"provider":   creds.User.Provider,
+			"plan":       creds.User.Plan,
 			"expires_at": creds.ExpiresAt,
 			"namespace":  fmt.Sprintf("fx://%s/*", creds.User.Username),
 		}
@@ -68,6 +69,9 @@ func runWhoami(asJSON, verify bool) error {
 		fmt.Printf("   Email:     %s\n", creds.User.Email)
 	}
 	fmt.Printf("   Provider:  %s\n", creds.User.Provider)
+	if creds.User.Plan != "" {
+		fmt.Printf("   Plan:      %s\n", creds.User.Plan)
+	}
 	fmt.Printf("   Namespace: fx://%s/*\n", creds.User.Username)
 	if !creds.ExpiresAt.IsZero() {
 		fmt.Printf("   Expires:   %s\n", creds.ExpiresAt.Format("2006-01-02 15:04 UTC"))

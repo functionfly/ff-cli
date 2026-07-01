@@ -322,6 +322,7 @@ func completeManualToken(provider, token string) error {
 		Email     string `json:"email"`
 		Provider  string `json:"provider"`
 		AvatarURL string `json:"avatar_url"`
+		Plan      string `json:"plan"`
 		ExpiresAt string `json:"expires_at"`
 	}
 	if err := client.Get("/v1/users/me", &user); err != nil {
@@ -338,7 +339,7 @@ func completeManualToken(provider, token string) error {
 	}
 	creds := &Credentials{
 		Version:   "1.0.0",
-		User:      UserInfo{ID: user.ID, Username: username, Email: user.Email, Provider: providerLabel, AvatarURL: user.AvatarURL},
+		User:      UserInfo{ID: user.ID, Username: username, Email: user.Email, Provider: providerLabel, AvatarURL: user.AvatarURL, Plan: user.Plan},
 		Token:     token,
 		TokenType: "Bearer",
 		ExpiresAt: resolveExpiresAt(user.ExpiresAt),
@@ -347,7 +348,7 @@ func completeManualToken(provider, token string) error {
 	if err := SaveCredentials(creds); err != nil {
 		return fmt.Errorf("could not save credentials: %w", err)
 	}
-	printLoginSuccess(username, user.Email, providerLabel, creds.ExpiresAt)
+	printLoginSuccess(username, user.Email, providerLabel, creds.ExpiresAt, user.Plan)
 	return nil
 }
 
@@ -410,6 +411,7 @@ func runBrowserOAuth(provider string, noBrowser bool) error {
 		Email     string `json:"email"`
 		Provider  string `json:"provider"`
 		AvatarURL string `json:"avatar_url"`
+		Plan      string `json:"plan"`
 		ExpiresAt string `json:"expires_at"`
 	}
 	client := NewAPIClientWithToken(token)
@@ -424,7 +426,7 @@ func runBrowserOAuth(provider string, noBrowser bool) error {
 	expiresAt := resolveExpiresAt(userResp.ExpiresAt)
 	creds := &Credentials{
 		Version:   "1.0.0",
-		User:      UserInfo{ID: userResp.ID, Username: username, Email: userResp.Email, Provider: provider, AvatarURL: userResp.AvatarURL},
+		User:      UserInfo{ID: userResp.ID, Username: username, Email: userResp.Email, Provider: provider, AvatarURL: userResp.AvatarURL, Plan: userResp.Plan},
 		Token:     token,
 		TokenType: "Bearer",
 		ExpiresAt: expiresAt,
@@ -433,7 +435,7 @@ func runBrowserOAuth(provider string, noBrowser bool) error {
 	if err := SaveCredentials(creds); err != nil {
 		return fmt.Errorf("could not save credentials: %w", err)
 	}
-	printLoginSuccess(username, userResp.Email, provider, expiresAt)
+	printLoginSuccess(username, userResp.Email, provider, expiresAt, userResp.Plan)
 	return nil
 }
 
@@ -444,7 +446,7 @@ func runBrowserOAuth(provider string, noBrowser bool) error {
 // without rewriting the callback wiring.
 func callbackMatchedState(_ string) bool { return true }
 
-func printLoginSuccess(username, email, provider string, expiresAt time.Time) {
+func printLoginSuccess(username, email, provider string, expiresAt time.Time, plan string) {
 	if username == "" {
 		username = "unknown"
 	}
@@ -454,6 +456,9 @@ func printLoginSuccess(username, email, provider string, expiresAt time.Time) {
 		fmt.Printf("   Email:    %s\n", email)
 	}
 	fmt.Printf("   Provider: %s\n", provider)
+	if plan != "" {
+		fmt.Printf("   Plan:     %s\n", planDisplayName(plan))
+	}
 	fmt.Printf("   Session:  expires in %d days\n", daysLeft)
 	fmt.Printf("\nYour namespace: fx://%s/*\n", username)
 }

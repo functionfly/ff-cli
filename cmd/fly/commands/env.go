@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,9 +16,9 @@ func NewEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "env",
 		Short:   "Manage environment variables",
-		Example: "  ff env list\n  ff env set KEY=value\n  ff env get KEY\n  ff env unset KEY\n  ff env apply          # read .env and set variables\n  ff env apply --dry-run",
+		Example: "  ff env list\n  ff env set KEY=value\n  ff env get KEY\n  ff env unset KEY\n  ff env apply          # read .env and set variables\n  ff env apply --dry-run\n  ff env import --format json config.json\n  ff env import --format shell env.sh",
 	}
-	cmd.AddCommand(newEnvListCmd(), newEnvSetCmd(), newEnvGetCmd(), newEnvUnsetCmd(), newEnvApplyCmd())
+	cmd.AddCommand(newEnvListCmd(), newEnvSetCmd(), newEnvGetCmd(), newEnvUnsetCmd(), newEnvApplyCmd(), newEnvImportCmd())
 	return cmd
 }
 
@@ -339,4 +340,253 @@ func runEnvApply(envPath string, dryRun bool) error {
 	}
 	fmt.Printf("\nApplied %d variable(s) from %s (%d new, %d updated)\n", len(pairs), filepath.Base(envPath), newCount, updCount)
 	return nil
+}
+
+func newEnvImportCmd() *cobra.Command {
+	var format string
+	var dryRun bool
+	var override bool
+	cmd := &cobra.Command{
+		Use:   "import [file]",
+		Short: "Import environment variables from a file",
+		Long: `Import environment variables from a file in one of several formats.
+
+Supported formats:
+  dotenv   — KEY=value lines (default for .env files)
+  json     — {"KEY": "value"} object
+  yaml     — KEY: value YAML mapping
+  shell    — export KEY=value lines
+
+Use --override to replace all existing variables with the imported set
+(default is to merge, only adding or updating).`,
+		Example: `  ff env import config.json --format json
+  ff env import .env.staging --format dotenv
+  ff env import env.sh --format shell
+  ff env import vars.yaml --format yaml
+  ff env import config.json --format json --override --dry-run`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runEnvImport(args[0], format, dryRun, override)
+		},
+	}
+	cmd.Flags().StringVar(&format, "format", "", "File format: dotenv, json, yaml, shell (auto-detected from extension if omitted)")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without applying them")
+	cmd.Flags().BoolVar(&override, "override", false, "Replace all existing variables instead of merging")
+	return cmd
+}
+
+func runEnvImport(filePath, format string, dryRun, override bool) error {
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return fmt.Errorf("could not resolve path %q: %w", filePath, err)
+	}
+	if info, err := os.Stat(absPath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file not found: %s", absPath)
+		}
+		return fmt.Errorf("could not access %s: %w", absPath, err)
+	} else if info.IsDir() {
+		return fmt.Errorf("%s is a directory, expected a file", absPath)
+	}
+
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		return fmt.Errorf("could not read %s: %w", absPath, err)
+	}
+
+	if format == "" {
+		format = detectFormat(absPath)
+	}
+
+	pairs, err := parseEnvFile(data, format)
+	if err != nil {
+		return err
+	}
+	if len(pairs) == 0 {
+		fmt.Printf("No variables found in %s (format: %s)\n", filepath.Base(absPath), format)
+		return nil
+	}
+
+	action := "merge"
+	if override {
+		action = "override"
+	}
+
+	if dryRun {
+		fmt.Printf("Dry run — would %s %d variable(s) from %s (%s):\n\n", action, len(pairs), filepath.Base(absPath), format)
+		keys := make([]string, 0, len(pairs))
+		for k := range pairs {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			fmt.Printf("  %s=%s\n", k, pairs[k])
+		}
+		fmt.Printf("\nRun without --dry-run to apply.\n")
+		return nil
+	}
+
+	creds, err := requireAuth()
+	if err != nil {
+		return err
+	}
+	manifest, err := LoadManifest("")
+	if err != nil {
+		return err
+	}
+	client, err := NewAPIClient()
+	if err != nil {
+		return err
+	}
+
+	envPath := fmt.Sprintf("/v1/registry/%s/%s/env", creds.User.Username, manifest.Name)
+
+	var existing map[string]string
+	if err := client.Get(envPath, &existing); err != nil {
+		existing = map[string]string{}
+	}
+
+	if override {
+		if err := client.Put(envPath, pairs, nil); err != nil {
+			return fmt.Errorf("could not import environment variables: %w", err)
+		}
+	} else {
+		merged := map[string]string{}
+		for k, v := range existing {
+			merged[k] = v
+		}
+		for k, v := range pairs {
+			merged[k] = v
+		}
+		if err := client.Put(envPath, merged, nil); err != nil {
+			return fmt.Errorf("could not import environment variables: %w", err)
+		}
+	}
+
+	newCount, updCount := 0, 0
+	for k := range pairs {
+		if _, ok := existing[k]; ok {
+			updCount++
+		} else {
+			newCount++
+		}
+	}
+
+	keys := make([]string, 0, len(pairs))
+	for k := range pairs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Printf("  %s (set)\n", k)
+	}
+	fmt.Printf("\nImported %d variable(s) from %s (%s) — %d new, %d updated\n", len(pairs), filepath.Base(absPath), action, newCount, updCount)
+	return nil
+}
+
+func detectFormat(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".json":
+		return "json"
+	case ".yaml", ".yml":
+		return "yaml"
+	case ".sh":
+		return "shell"
+	default:
+		return "dotenv"
+	}
+}
+
+func parseEnvFile(data []byte, format string) (map[string]string, error) {
+	switch format {
+	case "dotenv":
+		return parseDotenv(data), nil
+	case "json":
+		return parseEnvJSON(data)
+	case "yaml":
+		return parseEnvYAML(data)
+	case "shell":
+		return parseShell(data), nil
+	default:
+		return nil, fmt.Errorf("unsupported format %q — use dotenv, json, yaml, or shell", format)
+	}
+}
+
+func parseDotenv(data []byte) map[string]string {
+	pairs := map[string]string{}
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		line = strings.TrimPrefix(line, "export ")
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key := strings.TrimSpace(k)
+		if key == "" {
+			continue
+		}
+		v = strings.TrimSpace(v)
+		if (strings.HasPrefix(v, "\"") && strings.HasSuffix(v, "\"")) ||
+			(strings.HasPrefix(v, "'") && strings.HasSuffix(v, "'")) {
+			v = v[1 : len(v)-1]
+		}
+		pairs[key] = v
+	}
+	return pairs
+}
+
+func parseEnvJSON(data []byte) (map[string]string, error) {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+	pairs := map[string]string{}
+	for k, v := range raw {
+		pairs[k] = fmt.Sprintf("%v", v)
+	}
+	return pairs, nil
+}
+
+func parseEnvYAML(data []byte) (map[string]string, error) {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("invalid YAML (must be a flat key: value mapping): %w", err)
+	}
+	pairs := map[string]string{}
+	for k, v := range raw {
+		pairs[k] = fmt.Sprintf("%v", v)
+	}
+	return pairs, nil
+}
+
+func parseShell(data []byte) map[string]string {
+	pairs := map[string]string{}
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		line = strings.TrimPrefix(line, "export ")
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key := strings.TrimSpace(k)
+		if key == "" {
+			continue
+		}
+		v = strings.TrimSpace(v)
+		if (strings.HasPrefix(v, "\"") && strings.HasSuffix(v, "\"")) ||
+			(strings.HasPrefix(v, "'") && strings.HasSuffix(v, "'")) {
+			v = v[1 : len(v)-1]
+		}
+		pairs[key] = v
+	}
+	return pairs
 }

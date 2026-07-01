@@ -79,6 +79,9 @@ func newCanaryStartCmd() *cobra.Command {
 			if _, err := requireAuth(); err != nil {
 				return err
 			}
+			if err := requireVaultPlan(FeatureCanary); err != nil {
+				return err
+			}
 			author, name, err := resolveAuthorName(args)
 			if err != nil {
 				return err
@@ -170,6 +173,9 @@ func newCanaryPromoteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := requireVaultPlan(FeatureCanary); err != nil {
+				return err
+			}
 			client, err := NewAPIClient()
 			if err != nil {
 				return err
@@ -224,6 +230,9 @@ func newCanaryRollbackCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := requireVaultPlan(FeatureCanary); err != nil {
+				return err
+			}
 			client, err := NewAPIClient()
 			if err != nil {
 				return err
@@ -257,6 +266,9 @@ func newCanaryCancelCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
 			if err != nil {
+				return err
+			}
+			if err := requireVaultPlan(FeatureCanary); err != nil {
 				return err
 			}
 			if !force && IsInteractive() {

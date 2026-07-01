@@ -3,9 +3,12 @@
 /dist/
 *.exe
 *.test
+ff
+ffly
 
 # Build artifacts
 bin/
+build/
 
 # Go workspace
 /vendor/
@@ -21,6 +24,7 @@ go.work.sum
 *.swp
 *.swo
 *~
+AGENTS.md
 
 # OS
 .DS_Store
@@ -30,3 +34,19 @@ Thumbs.db
 /tmp/
 *.out
 coverage.txt
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Node (Nx monorepo)
+/node_modules/
+
+# Build staging
+build/staging/
+
+# Kilo
+kilo/

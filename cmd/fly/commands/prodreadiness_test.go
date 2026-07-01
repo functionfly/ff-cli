@@ -187,13 +187,13 @@ func TestSetConfigKey_PortRange(t *testing.T) {
 
 // Fix #9: init --template must validate against the allowed list.
 func TestIsValidTemplate(t *testing.T) {
-	good := []string{"hello-world", "http-api", "cron-job", "webhook", "python", "typescript", "javascript"}
+	good := []string{"hello-world", "http-api", "cron-job", "webhook", "python", "typescript", "javascript", "go", "ruby", "swift", "kotlin", "c"}
 	for _, tpl := range good {
 		if !isValidTemplate(tpl) {
 			t.Errorf("isValidTemplate(%q) = false, want true", tpl)
 		}
 	}
-	bad := []string{"ruby", "", "go", "PYTHON"}
+	bad := []string{"rust", "", "PYTHON", "Go"}
 	for _, tpl := range bad {
 		if isValidTemplate(tpl) {
 			t.Errorf("isValidTemplate(%q) = true, want false", tpl)
