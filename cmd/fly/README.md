@@ -5,7 +5,7 @@ The `ff` CLI is the primary developer interface for FunctionFly.
 ## Install and upgrade
 
 - **Install script (Linux/macOS):**  
-  `curl -fsSL https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.sh | bash`
+  `curl -fsSL https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/install.sh | bash`
 - **Homebrew:** `brew tap functionfly/tap && brew install ff` (when tap is configured)
 - **From source:** `make build` (binary at `bin/ff`)
 

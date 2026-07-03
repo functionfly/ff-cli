@@ -8,7 +8,7 @@
 
 **macOS / Linux (one-liner)**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/install.sh | bash
 ```
 
 **Homebrew**
@@ -19,10 +19,10 @@ brew install ff
 
 **Windows (PowerShell)**
 ```powershell
-iwr -useb https://raw.githubusercontent.com/functionfly/fly/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/install.ps1 | iex
 ```
 
-**Download directly** — see [Releases](https://github.com/functionfly/fly/releases)
+**Download directly** — see [Releases](https://github.com/functionfly/ff-cli/releases)
 
 ---
 
