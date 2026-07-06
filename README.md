@@ -13,7 +13,7 @@ curl -fsSL https://raw.githubusercontent.com/functionfly/ff-cli/main/scripts/ins
 
 **Homebrew**
 ```bash
-brew tap functionfly/tap
+brew tap functionfly/homebrew-tap
 brew install ff
 ```
 
