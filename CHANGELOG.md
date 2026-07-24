@@ -2,6 +2,18 @@
 
 ## v1.1.1 — 2026-07-24
 
+### New Commands
+
+- **`ff implant`** — Function implantation system for embedding and managing function implants:
+  - `build` — Build an implant from source
+  - `diff` — Compare implant versions
+  - `init` — Initialize a new implant
+  - `list` — List available implants
+  - `publish` — Publish an implant
+  - `sign` — Sign an implant
+  - `test` — Test an implant
+  - `validate` — Validate an implant manifest
+
 ### Bug Fixes
 
 - Fixed homebrew tap URL from `functionfly/tap` to `functionfly/homebrew-tap`
