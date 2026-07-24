@@ -60,7 +60,7 @@ preview, etc.) and deploy to multiple environments independently.
 				return fmt.Errorf("specify --env, --canary, or --promote")
 			}
 			if env != "" {
-				if err := validateEnvName(env); err != nil {
+				if err := validateEnvName(env, force); err != nil {
 					return err
 				}
 			}
@@ -74,7 +74,7 @@ preview, etc.) and deploy to multiple environments independently.
 	cmd.Flags().StringVar(&env, "env", "", "Target environment (any name: staging, production, dev, qa, preview, etc.)")
 	cmd.Flags().IntVar(&canaryPercent, "canary", 0, "Publish and start a canary at this traffic percentage (1–99)")
 	cmd.Flags().StringVar(&access, "access", "", "Access level: public or private")
-	cmd.Flags().BoolVar(&force, "force", false, "Skip confirmation prompts")
+	cmd.Flags().BoolVar(&force, "force", false, "Skip confirmation prompts and bypass reserved environment name restrictions")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Validate and bundle without publishing")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "Output as JSON")
 	cmd.Flags().BoolVar(&skipTypeCheck, "skip-type-check", false, "Skip TypeScript type checking")
@@ -91,7 +91,14 @@ preview, etc.) and deploy to multiple environments independently.
 // envNameRegex allows alphanumeric, hyphens, underscores, and dots.
 var envNameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$`)
 
-// reservedEnvs are env names with special meaning on the platform.
+// reservedEnvs are environment names that are reserved for platform features.
+// These names have special meaning in the FunctionFly deployment system:
+//   - production: Primary production environment
+//   - staging: Pre-production testing environment
+//   - dev: Development environment
+//   - preview: Pull request preview environments
+//   - canary: Traffic splitting/canary deployments
+// Use --force to bypass this restriction if needed.
 var reservedEnvs = map[string]bool{
 	"production": true,
 	"staging":    true,
@@ -100,12 +107,15 @@ var reservedEnvs = map[string]bool{
 	"canary":     true,
 }
 
-func validateEnvName(name string) error {
+func validateEnvName(name string, skipReserved bool) error {
 	if name == "" {
 		return fmt.Errorf("environment name cannot be empty")
 	}
 	if !envNameRegex.MatchString(name) {
 		return fmt.Errorf("invalid environment name %q — use alphanumeric, hyphens, underscores, dots (max 64 chars, must start with alphanumeric)", name)
+	}
+	if !skipReserved && reservedEnvs[name] {
+		return fmt.Errorf("environment name %q is reserved (use --force to override)", name)
 	}
 	return nil
 }
@@ -314,7 +324,7 @@ func injectEnvFile(envFile, envName string, asJSON bool) error {
 // runDeployPromote promotes a version from one environment to another
 // without re-publishing. Format: "source→target" or "source->target".
 func runDeployPromote(promote, targetEnv string, force, asJSON bool) error {
-	source, target, err := parsePromote(promote, targetEnv)
+	source, target, err := parsePromote(promote, targetEnv, force)
 	if err != nil {
 		return err
 	}
@@ -404,7 +414,7 @@ func runDeployPromote(promote, targetEnv string, force, asJSON bool) error {
 //	"staging→production"  (Unicode arrow)
 //	"staging->production" (ASCII arrow)
 //	"staging"             (uses --env as target, or defaults to "production")
-func parsePromote(promote, targetEnv string) (source, target string, err error) {
+func parsePromote(promote, targetEnv string, skipReserved bool) (source, target string, err error) {
 	// Try Unicode arrow
 	if parts := strings.Split(promote, "→"); len(parts) == 2 {
 		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), nil
@@ -415,14 +425,14 @@ func parsePromote(promote, targetEnv string) (source, target string, err error) 
 	}
 	// Single value: use as source, target from --env or default to production
 	source = strings.TrimSpace(promote)
-	if err := validateEnvName(source); err != nil {
+	if err := validateEnvName(source, skipReserved); err != nil {
 		return "", "", fmt.Errorf("invalid source environment: %w", err)
 	}
 	target = targetEnv
 	if target == "" {
 		target = "production"
 	}
-	if err := validateEnvName(target); err != nil {
+	if err := validateEnvName(target, skipReserved); err != nil {
 		return "", "", fmt.Errorf("invalid target environment: %w", err)
 	}
 	return source, target, nil

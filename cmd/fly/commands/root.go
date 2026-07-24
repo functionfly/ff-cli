@@ -116,6 +116,7 @@ Go from idea → global API in under 60 seconds.
 		NewScheduleCmd(),
 		NotifyCmd(),
 		NewDreCmd(),
+		NewImplantCmd(),
 		NewCompletionCmd(root),
 		NewCompletionsAliasCmd(root),
 		NewDoctorCmd(),

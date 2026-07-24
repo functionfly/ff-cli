@@ -70,7 +70,7 @@ func newDynTargetsListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List dynamic secret targets",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynTargetsList(limit, offset, asJSON)
 		},
 	}
@@ -121,7 +121,7 @@ func newDynTargetsCreateCmd() *cobra.Command {
 		Use:   "create",
 		Short: "Create a dynamic secret database target",
 		Example: `  ff vault dynamic targets create --name prod-db --db postgres --host db.example.com --port 5432 --database mydb --user admin --password secret`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynTargetsCreate(name, description, dbType, host, port, database, username, password, sslMode, roles, defaultTTL, maxTTL, asJSON)
 		},
 	}
@@ -193,7 +193,7 @@ func newDynTargetsTestCmd() *cobra.Command {
 		Use:   "test <id>",
 		Short: "Test connectivity to a dynamic secret target",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynTargetsTest(args[0], asJSON)
 		},
 	}
@@ -236,7 +236,7 @@ func newDynTargetsDeleteCmd() *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a dynamic secret target",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynTargetsDelete(args[0], force)
 		},
 	}
@@ -304,7 +304,7 @@ func newDynCredentialsListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List dynamic credential templates",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynCredentialsList(limit, offset, asJSON)
 		},
 	}
@@ -352,7 +352,7 @@ func newDynCredentialsCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a dynamic credential template",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynCredentialsCreate(targetID, name, description, roleTemplate, ttl, maxTTL, asJSON)
 		},
 	}
@@ -410,7 +410,7 @@ func newDynCredentialsGenerateCmd() *cobra.Command {
 		Long: `Generate a new set of short-lived database credentials from a credential template.
 The password is shown only once — save it immediately.`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynCredentialsGenerate(args[0], ttl, asJSON)
 		},
 	}
@@ -469,7 +469,7 @@ func newDynCredentialsRevokeCmd() *cobra.Command {
 		Use:   "revoke <id>",
 		Short: "Revoke all active leases for a credential",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynCredentialsRevoke(args[0], asJSON)
 		},
 	}
@@ -524,7 +524,7 @@ func newDynLeasesRenewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "renew",
 		Short: "Renew a dynamic credential lease",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynLeasesRenew(credentialID, leaseID, ttl, asJSON)
 		},
 	}
@@ -571,7 +571,7 @@ func newDynLeasesRevokeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "revoke",
 		Short: "Revoke a specific dynamic credential lease",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runDynLeasesRevoke(credentialID, leaseID, asJSON)
 		},
 	}

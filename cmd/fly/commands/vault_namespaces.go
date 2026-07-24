@@ -41,7 +41,7 @@ func newVaultNamespacesListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List vault namespaces",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultNamespacesList(asJSON)
 		},
 	}
@@ -93,7 +93,7 @@ func newVaultNamespacesCreateCmd() *cobra.Command {
 		Example: `  ff vault namespaces create --path "production/api-keys"
   ff vault namespaces create --path "staging/secrets" --description "Staging environment"
   ff vault namespaces create --path "prod/db" --parent <parent-ns-id>`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultNamespacesCreate(path, description, parentID, asJSON)
 		},
 	}
@@ -146,7 +146,7 @@ func newVaultNamespacesDeleteCmd() *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a vault namespace",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultNamespacesDelete(args[0], force)
 		},
 	}

@@ -73,7 +73,7 @@ func newRBACRolesListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List all vault roles",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runRBACRolesList(asJSON)
 		},
 	}
@@ -124,7 +124,7 @@ func newRBACRolesCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a custom vault role",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runRBACRolesCreate(name, description, asJSON)
 		},
 	}
@@ -173,7 +173,7 @@ func newRBACRolesUpdateCmd() *cobra.Command {
 		Use:   "update <id>",
 		Short: "Update a non-builtin vault role",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runRBACRolesUpdate(args[0], name, description, asJSON)
 		},
 	}
@@ -223,7 +223,7 @@ func newRBACRolesDeleteCmd() *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Delete a non-builtin vault role",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runRBACRolesDelete(args[0], force)
 		},
 	}
@@ -263,7 +263,7 @@ func newVaultRBACAssignmentsCmd() *cobra.Command {
 		Use:     "assignments",
 		Aliases: []string{"assigns"},
 		Short:   "List your current role assignments",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runRBACAssignmentsList(asJSON)
 		},
 	}
@@ -309,7 +309,7 @@ func newVaultRBACAssignCmd() *cobra.Command {
 		Short: "Assign a vault role to a user",
 		Example: `  ff vault rbac assign --role <role-id> --user <user-id>
   ff vault rbac assign --role <role-id> --user <user-id> --scope production`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runRBACAssign(roleID, userID, scope, asJSON)
 		},
 	}
@@ -359,7 +359,7 @@ func newVaultRBACUnassignCmd() *cobra.Command {
 		Use:   "unassign <assignment-id>",
 		Short: "Remove a role assignment",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runRBACUnassign(args[0], force)
 		},
 	}

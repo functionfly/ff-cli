@@ -50,7 +50,7 @@ func newVaultTokensCreateCmd() *cobra.Command {
 is shown only once — save it immediately.`,
 		Example: `  ff vault tokens create --secret <secret-id> --name ci-token
   ff vault tokens create --secret <id> --name deploy --scopes read,write --expires 720`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultTokensCreate(secretID, name, scopes, expiresInHours, asJSON)
 		},
 	}
@@ -110,7 +110,7 @@ func newVaultTokensListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List access tokens for a vault secret",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultTokensList(secretID, asJSON)
 		},
 	}
@@ -156,7 +156,7 @@ func newVaultTokensRevokeCmd() *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Revoke an access token",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultTokensRevoke(args[0], reason, asJSON)
 		},
 	}

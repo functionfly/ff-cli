@@ -5,6 +5,10 @@
 *.test
 ff
 ffly
+ff_linux_amd64
+ff_darwin_amd64
+ff_darwin_arm64
+ff_windows_amd64.exe
 
 # Build artifacts
 bin/

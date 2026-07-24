@@ -29,7 +29,7 @@ func NewManifestEnsureDescriptionsCmd() *cobra.Command {
 		Short: "Add description to each functionfly.jsonc when missing (humanized from name)",
 		Long:  `Reads each functionfly.jsonc under the directory, and when "description" is missing or empty, sets it from the function name (e.g. text-truncate → "Text truncate"). Comments, formatting, and key order in the JSONC source are preserved.`,
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			dir := "."
 			if len(args) > 0 {
 				dir = args[0]

@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.1 — 2026-07-24
+
+### Bug Fixes
+
+- Fixed homebrew tap URL from `functionfly/tap` to `functionfly/homebrew-tap`
+- Fixed GitHub URLs from `functionfly/fly` to `functionfly/ff-cli`
+
+---
+
 ## v1.1.0 — 2026-07-01
 
 ### New Commands

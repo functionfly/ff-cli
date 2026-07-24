@@ -49,7 +49,7 @@ func newVaultConfigMFACmd() *cobra.Command {
 		Example: `  ff vault config mfa
   ff vault config mfa --enable --method totp
   ff vault config mfa --enable --method webauthn --session-ttl 7200`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultConfigMFA(enable, method, sessionTTL, asJSON)
 		},
 	}
@@ -137,7 +137,7 @@ func newVaultConfigSSOCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sso",
 		Short: "View SSO/SAML configuration",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultConfigSSO(asJSON)
 		},
 	}
@@ -194,7 +194,7 @@ approver — self-approval is not allowed.`,
   ff vault config break-glass approve <id>
   ff vault config break-glass deny <id>
   ff vault config break-glass revoke <id>`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runBreakGlassRequest(reason, duration, asJSON)
 		},
 	}
@@ -260,7 +260,7 @@ func newBreakGlassListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List break-glass requests",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runBreakGlassList(asJSON)
 		},
 	}
@@ -304,7 +304,7 @@ func newBreakGlassApproveCmd() *cobra.Command {
 		Use:   "approve <id>",
 		Short: "Approve a break-glass request",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runBreakGlassAction(args[0], "approve", asJSON)
 		},
 	}
@@ -318,7 +318,7 @@ func newBreakGlassDenyCmd() *cobra.Command {
 		Use:   "deny <id>",
 		Short: "Deny a break-glass request",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runBreakGlassAction(args[0], "deny", asJSON)
 		},
 	}
@@ -332,7 +332,7 @@ func newBreakGlassRevokeCmd() *cobra.Command {
 		Use:   "revoke <id>",
 		Short: "Revoke an active break-glass grant",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runBreakGlassAction(args[0], "revoke", asJSON)
 		},
 	}
@@ -381,7 +381,7 @@ func newVaultConfigEscrowCmd() *cobra.Command {
 		Example: `  ff vault config escrow
   ff vault config escrow --enable
   ff vault config escrow --disable`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultConfigEscrow(enable, disable, asJSON)
 		},
 	}
@@ -460,7 +460,7 @@ func newVaultConfigCacheCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cache",
 		Short: "View vault cache statistics",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultConfigCache(asJSON)
 		},
 	}

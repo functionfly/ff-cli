@@ -69,7 +69,7 @@ func newCanaryStartCmd() *cobra.Command {
 		Example: "  ff canary start --version 1.2.0 --percent 10\n" +
 			"  ff canary start --version 1.2.0 --percent 5 --auto-promote --promote-threshold 99.5",
 		Args: cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			if version == "" {
 				return fmt.Errorf("--version is required")
 			}
@@ -129,7 +129,7 @@ func newCanaryStatusCmd() *cobra.Command {
 		Short:   "Show the current canary deployment",
 		Example: "  ff canary status\n  ff canary status alice/my-fn",
 		Args:    cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
 			if err != nil {
 				return err
@@ -168,7 +168,7 @@ func newCanaryPromoteCmd() *cobra.Command {
 		Example: "  ff canary promote --percent 50\n" +
 			"  ff canary promote --full",
 		Args: cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
 			if err != nil {
 				return err
@@ -225,7 +225,7 @@ func newCanaryRollbackCmd() *cobra.Command {
 		Short:   "Roll back the canary to the stable version",
 		Example: "  ff canary rollback\n  ff canary rollback alice/my-fn",
 		Args:    cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
 			if err != nil {
 				return err
@@ -263,7 +263,7 @@ func newCanaryCancelCmd() *cobra.Command {
 		Short:   "Cancel and remove the active canary deployment",
 		Example: "  ff canary cancel\n  ff canary cancel --force",
 		Args:    cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
 			if err != nil {
 				return err
@@ -303,7 +303,7 @@ func newCanaryHistoryCmd() *cobra.Command {
 		Short:   "Show canary deployment history",
 		Example: "  ff canary history\n  ff canary history alice/my-fn",
 		Args:    cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			author, name, err := resolveAuthorName(args)
 			if err != nil {
 				return err

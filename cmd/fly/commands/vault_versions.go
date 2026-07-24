@@ -63,7 +63,7 @@ func newVaultVersionsListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List versions of a vault secret",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultVersionsList(secretID, limit, offset, asJSON)
 		},
 	}
@@ -114,7 +114,7 @@ func newVaultVersionsGetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a specific version of a vault secret",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultVersionsGet(secretID, version, asJSON)
 		},
 	}
@@ -163,7 +163,7 @@ func newVaultVersionsDiffCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "diff",
 		Short: "Diff two versions of a vault secret",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultVersionsDiff(secretID, fromVersion, toVersion, asJSON)
 		},
 	}
@@ -230,7 +230,7 @@ func newVaultVersionsRollbackCmd() *cobra.Command {
 		Short: "Rollback a vault secret to a previous version",
 		Example: `  ff vault versions rollback --secret <id> --to 3
   ff vault versions rollback --secret <id> --to 2 --reason "revert broken rotation"`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultVersionsRollback(secretID, targetVersion, reason, asJSON)
 		},
 	}

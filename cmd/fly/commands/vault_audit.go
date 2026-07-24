@@ -57,7 +57,7 @@ func newVaultAuditListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List vault audit log entries",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultAuditList(secretID, action, actorType, actorID, limit, offset, asJSON)
 		},
 	}
@@ -133,7 +133,7 @@ By default exports the last 24 hours. Use --from and --to with RFC3339 timestamp
 		Example: `  ff vault audit export --format json
   ff vault audit export --format csv --output audit.csv
   ff vault audit export --format cef --from 2025-01-01T00:00:00Z`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultAuditExport(format, from, to, secretID, action, outputPath)
 		},
 	}

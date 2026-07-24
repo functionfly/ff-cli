@@ -104,6 +104,7 @@ func addFileToTar(tw *tar.Writer, name string, data []byte) error {
 
 // collectSourceFiles walks the current directory and returns source file paths
 // matching the given extensions.
+//nolint:unused // Reserved for future native bundling feature
 func collectSourceFiles(extensions []string) ([]string, error) {
 	var files []string
 	extSet := make(map[string]bool, len(extensions))

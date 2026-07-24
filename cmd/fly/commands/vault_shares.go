@@ -40,7 +40,7 @@ func newVaultSharesCreateCmd() *cobra.Command {
 		Short: "Share a vault secret with another tenant",
 		Example: `  ff vault shares create --secret <id> --grantee <tenant-id> --permissions read
   ff vault shares create --secret <id> --grantee <tenant-id> --permissions read-write --expires 2025-12-31T23:59:59Z`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSharesCreate(secretID, granteeTenantID, permissions, expiresAt, asJSON)
 		},
 	}
@@ -97,7 +97,7 @@ func newVaultSharesListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List secrets shared with your tenant",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSharesList(asJSON)
 		},
 	}
@@ -142,7 +142,7 @@ func newVaultSharesRevokeCmd() *cobra.Command {
 		Aliases: []string{"rm"},
 		Short:   "Revoke a secret share",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSharesRevoke(args[0], force)
 		},
 	}

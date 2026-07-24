@@ -565,6 +565,7 @@ func truncateValue(s string, max int) string {
 }
 
 // readFileLines reads a file and returns its lines (for import variants).
+//nolint:unused // Reserved for future line-by-line import feature
 func readFileLines(path string) ([]string, error) {
 	f, err := os.Open(path)
 	if err != nil {

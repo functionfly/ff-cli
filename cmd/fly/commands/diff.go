@@ -155,10 +155,13 @@ func compareManifest(local *Manifest, remote *FunctionMetadata, hasRemote bool) 
 	fields = append(fields, diffField("cache_ttl", local.CacheTTL, remote.CacheTTL))
 	fields = append(fields, diffField("timeout_ms", local.TimeoutMS, remote.TimeoutMS))
 	fields = append(fields, diffField("memory_mb", local.MemoryMB, remote.MemoryMB))
+	fields = append(fields, compareEnv(local.Env, remote.Env)...)
 
 	return fields
 }
 
+// compareDeps compares local and remote dependencies.
+//nolint:unused // Deps comparison pending remote API support
 func diffField(name string, local, remote interface{}) DiffField {
 	localJSON, _ := json.Marshal(local)
 	remoteJSON, _ := json.Marshal(remote)
@@ -200,6 +203,8 @@ func compareEnv(local, remote map[string]string) []DiffField {
 	return fields
 }
 
+// compareDeps compares local and remote dependencies.
+//nolint:unused // Deps comparison pending remote API support
 func compareDeps(local, remote map[string]string) []DiffField {
 	var fields []DiffField
 	if local == nil {

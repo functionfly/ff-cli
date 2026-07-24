@@ -28,7 +28,7 @@ func NewDreRegenerateBootstrapCmd() *cobra.Command {
 		Use:   "regenerate-bootstrap",
 		Short: "Regenerate bootstrap FXCERTs with the current node key (signed certs)",
 		Long:  "Calls the API to delete existing bootstrap certificates and re-create them using the server's DRE_NODE_PRIVATE_KEY so the UI shows Node Key ID. Optional --author limits to one author (e.g. functionfly).",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			c, err := NewAPIClient()
 			if err != nil {
 				return err

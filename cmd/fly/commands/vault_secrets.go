@@ -89,7 +89,7 @@ func newVaultSecretsListCmd() *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List vault secrets (metadata only)",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSecretsList(secretType, namespace, limit, offset, asJSON)
 		},
 	}
@@ -164,7 +164,7 @@ using your tenant's encryption key.`,
 		Example: `  ff vault secrets create --name my-api-key --type api_key --value "sk-abc123"
   ff vault secrets create --name db-pass --type database --value "p@ss" --namespace production
   ff vault secrets create --name token --type custom --value "xyz" --scopes read,deploy`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSecretsCreate(name, description, secretType, namespace, value, scopes, asJSON)
 		},
 	}
@@ -231,7 +231,7 @@ func newVaultSecretsGetCmd() *cobra.Command {
 		Use:   "get <id>",
 		Short: "Get a vault secret by ID",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSecretsGet(args[0], asJSON)
 		},
 	}
@@ -282,7 +282,7 @@ func newVaultSecretsUpdateCmd() *cobra.Command {
 		Use:   "update <id>",
 		Short: "Update a vault secret's metadata",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSecretsUpdate(args[0], name, description, scopes, asJSON)
 		},
 	}
@@ -333,7 +333,7 @@ func newVaultSecretsDeleteCmd() *cobra.Command {
 		Aliases: []string{"rm", "remove"},
 		Short:   "Soft-delete a vault secret",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSecretsDelete(args[0], force)
 		},
 	}
@@ -373,7 +373,7 @@ encrypted ciphertext while preserving the secret's metadata and ID.`,
 		Example: `  ff vault secrets rotate <id> --value "new-secret-value"
   ff vault secrets rotate <id> --value "new-key" --reason "quarterly rotation"`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSecretsRotate(args[0], value, reason, asJSON)
 		},
 	}
@@ -422,7 +422,7 @@ func newVaultSecretsBulkDeleteCmd() *cobra.Command {
 		Short: "Bulk delete up to 100 vault secrets",
 		Example: `  ff vault secrets bulk-delete --ids id1,id2,id3
   ff vault secrets bulk-delete --ids id1,id2 --dry-run`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSecretsBulkDelete(ids, dryRun)
 		},
 	}
@@ -476,7 +476,7 @@ func newVaultSecretsExportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export vault secrets metadata",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			return runVaultSecretsExport(asJSON)
 		},
 	}
