@@ -9,7 +9,7 @@ import (
 
 // Version is the semantic version string, injected at build time.
 // Defaults to "dev" if not set during build.
-var Version = "1.1.0"
+var Version = "1.1.1"
 
 // Commit is the git commit hash, injected at build time.
 // Defaults to "" if not set during build.
