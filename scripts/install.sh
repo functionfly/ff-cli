@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-VERSION="${VERSION:-1.0.0}"
+VERSION="${VERSION:-1.1.1}"
 TAG="v${VERSION}"
 OS="$(uname -s)"
 ARCH="$(uname -m)"
